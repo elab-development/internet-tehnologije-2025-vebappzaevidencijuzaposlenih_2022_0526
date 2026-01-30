@@ -9,7 +9,7 @@ export default function Nav() {
 
       <div className="flex items-center gap-2">
         <Link
-          href="/"
+          href="/home"
           className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
         >
           Home
@@ -29,14 +29,14 @@ export default function Nav() {
           Izvestaji
         </Link>
          <Link
-          href="/"
+          href="/activities"
           className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
         >
           Aktivnosti
         </Link>
          <Link
           href="/"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
         >
           Log out
         </Link>
