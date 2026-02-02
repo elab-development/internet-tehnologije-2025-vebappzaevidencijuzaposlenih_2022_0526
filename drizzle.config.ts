@@ -6,7 +6,7 @@ export default {
   out: "./drizzle",
   dialect: "postgresql",
 dbCredentials: {
-  host: "localhost",
+  host: "127.0.0.1",
   port: 5432,
   user: "postgres",
   password: "postgres",

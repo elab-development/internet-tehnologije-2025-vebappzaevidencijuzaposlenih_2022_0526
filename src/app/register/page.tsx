@@ -25,7 +25,7 @@ export default function RegisterPage() {
     });
 
     if (res.ok) {
-      router.push("/");
+      router.push("/home");
       return;
     }
 
