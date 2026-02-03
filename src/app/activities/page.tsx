@@ -4,6 +4,7 @@ import { useState } from "react";
 import Nav from "../../components/nav";
 import Button from "../../components/button";
 import Input from "../../components/input";
+import Table from "../../components/table";
 
 export default function ActivitiesPage() {
   const today = new Date().toISOString().split("T")[0];
@@ -16,24 +17,32 @@ export default function ActivitiesPage() {
   const [activityName, setActivityName] = useState("");
 
   function handleSaveActivity() {
-    // za sad samo zatvaramo modal (kasnije može čuvanje u listu)
     console.log(fromTime, toTime, activityName);
     setShowModal(false);
 
-    // reset polja
     setFromTime("");
     setToTime("");
     setActivityName("");
   }
+
+  // TABELA: kolone + primer podaci (kasnije možeš da ubaciš state listu)
+  const columns = [
+    { header: "Vreme od", accessor: "from" },
+    { header: "Vreme do", accessor: "to" },
+    { header: "Naziv aktivnosti", accessor: "name" },
+  ];
+
+  const data = [
+    { from: "09:00", to: "11:00", name: "Rad na projektu" },
+    { from: "11:15", to: "12:30", name: "Sastanak tima" },
+  ];
 
   return (
     <>
       <Nav />
 
       <main className="mx-auto max-w-3xl p-6 font-sans">
-        <h1 className="mb-4 text-2xl font-semibold">
-          Aktivnosti zaposlenog
-        </h1>
+        <h1 className="mb-4 text-2xl font-semibold">Aktivnosti zaposlenog</h1>
 
         {/* KALENDAR + DUGME */}
         <div className="mb-6 flex items-end justify-between gap-4 rounded-xl bg-white p-4 shadow">
@@ -54,26 +63,16 @@ export default function ActivitiesPage() {
             </p>
           </div>
 
-          <Button
-            text="Dodaj aktivnost"
-            onClick={() => setShowModal(true)}
-          />
+          <Button text="Dodaj aktivnost" onClick={() => setShowModal(true)} />
         </div>
 
-        {/* LISTA AKTIVNOSTI */}
+        {/* TABELA AKTIVNOSTI */}
         <section className="rounded-xl bg-white p-4 shadow">
           <h2 className="mb-3 text-xl font-semibold">
             Aktivnosti za izabrani dan
           </h2>
 
-          <ul className="space-y-2">
-            <li className="rounded-lg border p-3">
-              09:00 – 11:00 • Rad na projektu
-            </li>
-            <li className="rounded-lg border p-3">
-              11:15 – 12:30 • Sastanak tima
-            </li>
-          </ul>
+          <Table columns={columns} data={data} />
         </section>
       </main>
 
@@ -81,9 +80,7 @@ export default function ActivitiesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow">
-            <h2 className="mb-4 text-xl font-semibold">
-              Nova aktivnost
-            </h2>
+            <h2 className="mb-4 text-xl font-semibold">Nova aktivnost</h2>
 
             <div className="mb-3">
               <label className="mb-1 block text-sm">Vreme od</label>
@@ -106,9 +103,7 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="mb-4">
-              <label className="mb-1 block text-sm">
-                Naziv aktivnosti
-              </label>
+              <label className="mb-1 block text-sm">Naziv aktivnosti</label>
               <Input
                 placeholder="npr. Predavanje iz PIS"
                 value={activityName}
@@ -117,14 +112,8 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button
-                text="Otkaži"
-                onClick={() => setShowModal(false)}
-              />
-              <Button
-                text="Sačuvaj"
-                onClick={handleSaveActivity}
-              />
+              <Button text="Otkaži" onClick={() => setShowModal(false)} />
+              <Button text="Sačuvaj" onClick={handleSaveActivity} />
             </div>
           </div>
         </div>
