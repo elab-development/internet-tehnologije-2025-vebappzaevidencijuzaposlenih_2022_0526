@@ -1,38 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Nav from "../../components/nav";
 import Button from "../../components/button";
+
+type TodayRecord = {
+  id: number;
+  workDate: string;
+  checkIn: string;
+  checkOut: string | null;
+} | null;
 
 export default function HomePage() {
   const today = new Date().toLocaleDateString("sr-RS");
 
-  const [status, setStatus] = useState<"in" | "out" | null>(null);
-  const [time, setTime] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [record, setRecord] = useState<TodayRecord>(null);
+  const [error, setError] = useState("");
 
-  function nowTime() {
-    return new Date().toLocaleTimeString("sr-RS", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  async function loadToday() {
+    setLoading(true);
+    setError("");
+
+    const res = await fetch("/api/attendance/today", { method: "GET" });
+    const data = await res.json().catch(() => null);
+
+    setRecord(data?.record ?? null);
+    setLoading(false);
   }
 
-  function handleCheckIn() {
-    setStatus("in");
-    setTime(nowTime());
+  useEffect(() => {
+    loadToday();
+  }, []);
+
+  async function handleCheckIn() {
+    setError("");
+    const res = await fetch("/api/attendance/check-in", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(data?.error || "Greška pri check-in.");
+      return;
+    }
+    await loadToday(); // ucitaj ponovo iz baze
   }
 
-  function handleCheckOut() {
-    setStatus("out");
-    setTime(nowTime());
+  async function handleCheckOut() {
+    setError("");
+    const res = await fetch("/api/attendance/check-out", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(data?.error || "Greška pri check-out.");
+      return;
+    }
+    await loadToday(); // ucitaj ponovo iz baze
   }
 
-  const checkInDisabled = status === "in";
-  const checkOutDisabled = status !== "in"; // disable dok nije check in
+  const hasCheckIn = !!record?.checkIn;
+  const hasCheckOut = !!record?.checkOut;
+
+  const checkInDisabled = hasCheckIn;          // ako je vec checkIn, disable
+  const checkOutDisabled = !hasCheckIn || hasCheckOut; // mora prvo checkIn, i samo jednom
 
   return (
     <>
       <Nav />
+
       <main className="mx-auto max-w-3xl p-6 font-sans">
         <h1 className="mb-2 text-2xl font-semibold">Evidencija prisustva</h1>
 
@@ -40,39 +72,25 @@ export default function HomePage() {
           Današnji datum: <b>{today}</b>
         </p>
 
-        {/* CHECK IN / CHECK OUT */}
         <div className="mb-4 flex gap-3">
-          <Button text="Check in" onClick={handleCheckIn} disabled={checkInDisabled} />
-          <Button text="Check out" onClick={handleCheckOut} disabled={checkOutDisabled} />
+          <Button text="Check in" onClick={handleCheckIn} disabled={checkInDisabled || loading} />
+          <Button text="Check out" onClick={handleCheckOut} disabled={checkOutDisabled || loading} />
         </div>
 
-        {/* STATUS */}
-        {status && (
-          <p className="mb-6 text-sm text-green-600">
+        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+        {!loading && (
+          <p className="mb-6 text-sm text-green-700">
             Status:{" "}
-            {status === "in"
-              ? `Ulogovana (${time})`
-              : `Odjavljena (${time})`}
+            {!record
+              ? "Nema evidencije za danas."
+              : record.checkOut
+              ? `Check-out u ${new Date(record.checkOut).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}`
+              : `Check-in u ${new Date(record.checkIn).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}`}
           </p>
         )}
-
-        {/* AKTIVNOSTI */}
-        <section>
-          <h2 className="mb-3 text-xl font-semibold">Današnje aktivnosti</h2>
-
-          <ul className="space-y-2">
-            <li className="rounded-lg border p-3">
-              14:00 – 16:00 • PIS predavanje
-            </li>
-            <li className="rounded-lg border p-3">
-              16:15 – 18:00 • Vežbe iz internet tehnologija
-            </li>
-            <li className="rounded-lg border p-3">
-              18:15 – 19:00 • Samostalni rad
-            </li>
-          </ul>
-        </section>
       </main>
     </>
   );
 }
+

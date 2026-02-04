@@ -2,6 +2,7 @@ import {
   pgTable,
   serial,
   text,
+  time,
   timestamp,
   integer,
   boolean,
@@ -68,19 +69,24 @@ export const workDayRecords = pgTable(
   "work_day_records",
   {
     id: serial("id").primaryKey(),
+
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
 
     workDate: date("work_date").notNull(),
-    checkIn: timestamp("check_in").notNull(),
-    checkOut: timestamp("check_out"),
-    note: text("note"),
 
+    checkIn: timestamp("check_in"),
+    checkOut: timestamp("check_out"),
+
+    note: text("note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
-    uniqueUserDate: uniqueIndex("work_day_user_date_unique").on(t.userId, t.workDate),
+    uniqueUserDate: uniqueIndex("work_day_user_date_unique").on(
+      t.userId,
+      t.workDate
+    ),
   })
 );
 
@@ -93,5 +99,7 @@ export const activities = pgTable("activities", {
   title: text("title").notNull(),
   description: text("description"),
   minutesSpent: integer("minutes_spent").notNull().default(0),
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

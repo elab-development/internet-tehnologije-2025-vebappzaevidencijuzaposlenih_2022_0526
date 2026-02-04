@@ -1,11 +1,13 @@
+"use client";
+
 type Column = {
-  header: string;
-  accessor: string;
+  header: string; //tekst u headeru kolone
+  accessor: string; //accessor=naziv polja iz objekta npr. startTime, endTime...
 };
 
 type TableProps = {
   columns: Column[];
-  data: any[];
+  data: Record<string, any>[];
 };
 
 export default function Table({ columns, data }: TableProps) {
@@ -25,6 +27,17 @@ export default function Table({ columns, data }: TableProps) {
       </thead>
 
       <tbody>
+        {data.length === 0 && (
+          <tr>
+            <td
+              colSpan={columns.length}
+              className="border px-3 py-4 text-center text-sm text-zinc-500"
+            >
+              Nema aktivnosti za izabrani datum
+            </td>
+          </tr>
+        )}
+
         {data.map((row, i) => (
           <tr key={i} className="hover:bg-blue-50">
             {columns.map((col) => (
