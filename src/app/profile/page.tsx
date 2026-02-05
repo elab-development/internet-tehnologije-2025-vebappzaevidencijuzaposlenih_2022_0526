@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Nav from "../../components/nav";
 
 type MeUser = {
   id: number;
@@ -48,7 +47,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Nav />
 
       <main className="mx-auto max-w-3xl p-6 font-sans">
         <h1 className="mb-4 text-2xl font-semibold">Moj profil</h1>

@@ -1,11 +1,8 @@
 "use client"
-
-import Nav from "../../components/nav";
-
-export default function ReportsPaeg() {
+export default function ReportsPage() {
   return (
     <>
-      <Nav />
+
       <main className="mx-auto max-w-3xl p-6 font-sans">
         <h1 className="mb-4 text-2xl font-semibold">Izvestaji</h1>
         <div className="rounded-xl bg-white p-6 shadow">

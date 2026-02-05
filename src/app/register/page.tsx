@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Nav from "../../components/nav";
 import Input from "../../components/input";
 import Button from "../../components/button";
 
@@ -35,8 +34,7 @@ export default function RegisterPage() {
 
    return (
     <>
-      {/* NAV IDE OVDE */}
-      <Nav />
+
 
       {/* OVO JE OGRANIČENI SADRŽAJ */}
       <main className="mx-auto max-w-md p-6 font-sans">

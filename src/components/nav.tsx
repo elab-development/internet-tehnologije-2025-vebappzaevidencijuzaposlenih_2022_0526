@@ -1,162 +1,77 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-
-type MeUser = {
-  id: number;
-  fullName: string;
-  email: string;
-  roleId: number;
-};
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "./AuthProvider";
 
 export default function Nav() {
+  const { status, user, logout } = useAuth();
+  const pathname = usePathname();
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<MeUser | null>(null);
-
-  //proveravamo da li je korisnik ulogovan
-  useEffect(() => {
-    async function loadMe() {
-      const res = await fetch("/api/auth/me");
-      const data = await res.json().catch(() => null);
-      setUser(data?.user ?? null);
-      setLoading(false);
-    }
-
-    loadMe();
-  }, []);
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
-    router.push("/login");
-    router.refresh();
+  // nema nav bara dok korisnik nije ulogovan
+  if (status !== "authenticated" || !user) {
+    return null;
   }
 
-  //dok cekamo odgovor od backenda, ne renderujemo nista
-  if (loading) return null;
+  const isActive = (href: string) => pathname === href;
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
 
   return (
-    <nav className="mb-6 flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-      <Link href="/" className="text-sm font-semibold text-zinc-900">
-        Evidencija prisustva zaposlenih
-      </Link>
+    <header className="border-b bg-white">
+      <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+        <span className="text-sm font-semibold">
+          Evidencija prisustva zaposlenih
+        </span>
 
-      {/*KORISNIK NIJE ULOGOVAN*/}
-      {!user && (
-        <Link
-          href="/login"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Login
-        </Link>
-      )}
-
-      {/*KORISNIK ULOGOVAN */}
-      {user && (
-        <div className="flex items-center gap-2">
-          <Link
-            href="/home"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
+        <div className="flex items-center gap-4 text-sm">
+          <NavLink href="/home" active={isActive("/home")}>
             Home
-          </Link>
-
-          <Link
-            href="/profile"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
+          </NavLink>
+          <NavLink href="/profile" active={isActive("/profile")}>
             Moj profil
-          </Link>
-
-          <Link
-            href="/activities"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
+          </NavLink>
+          <NavLink href="/activities" active={isActive("/activities")}>
             Aktivnosti
-          </Link>
-
-          <Link
-            href="/reports"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            Izvestaji
-          </Link>
+          </NavLink>
+          <NavLink href="/reports" active={isActive("/reports")}>
+            Izveštaji
+          </NavLink>
 
           <button
             onClick={handleLogout}
-            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+            className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white hover:bg-zinc-800"
           >
-            Log out
+            Logout
           </button>
         </div>
-      )}
-    </nav>
+      </nav>
+    </header>
   );
 }
 
-
-
-/*"use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-export default function Nav() {
-
-  const router = useRouter();
-  async function handleLogout(){
-    await fetch ("/api/auth/logout",{method: "POST"});
-    router.push("/login");
-    router.refresh();
-  }
-
-
+function NavLink({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <nav className="mb-6 flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-      <Link href="/" className="text-sm font-semibold text-zinc-900">
-        Evidencija prisustva
-      </Link>
-
-      <div className="flex items-center gap-2">
-        <Link
-          href="/home"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Home
-        </Link>
-
-        <Link
-          href="/profile"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Moj profil
-        </Link>
-
-        <Link
-          href="/"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Izvestaji
-        </Link>
-         <Link
-          href="/activities"
-          className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Aktivnosti
-        </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          Log out
-        </button>
-        
-      </div>
-    </nav>
+    <Link
+      href={href}
+      className={
+        "transition-colors hover:text-black" +
+        (active ? " font-semibold text-black" : " text-zinc-600")
+      }
+    >
+      {children}
+    </Link>
   );
-}*/
+}

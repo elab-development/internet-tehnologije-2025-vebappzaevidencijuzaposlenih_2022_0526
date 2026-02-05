@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Nav from "../../components/nav";
+import { useRouter } from "next/navigation";
 import Button from "../../components/button";
+import { useAuth } from "../../components/AuthProvider";
 
 type TodayRecord = {
   id: number;
@@ -12,85 +13,123 @@ type TodayRecord = {
 } | null;
 
 export default function HomePage() {
+  const router = useRouter();
+  const { status, user } = useAuth();
+
   const today = new Date().toLocaleDateString("sr-RS");
 
+  // SVI hookovi su gore, bez uslova
   const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState<TodayRecord>(null);
   const [error, setError] = useState("");
+
+  // ako nije ulogovan → redirect na /login
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
+
+  // učitavanje današnjeg zapisa, ali tek kad imamo auth user-a
+  useEffect(() => {
+    if (status !== "authenticated" || !user) return;
+
+    loadToday();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, user]);
 
   async function loadToday() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/attendance/today", { method: "GET" });
+    const res = await fetch("/api/attendance/today", {
+      method: "GET",
+      credentials: "include",
+    });
     const data = await res.json().catch(() => null);
 
     setRecord(data?.record ?? null);
     setLoading(false);
   }
-
-  useEffect(() => {
-    loadToday();
-  }, []);
-
+  
   async function handleCheckIn() {
     setError("");
-    const res = await fetch("/api/attendance/check-in", { method: "POST" });
+    const res = await fetch("/api/attendance/check-in", {
+      method: "POST",
+      credentials: "include",
+    });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       setError(data?.error || "Greška pri check-in.");
       return;
     }
-    await loadToday(); // ucitaj ponovo iz baze
+    await loadToday();
   }
 
   async function handleCheckOut() {
     setError("");
-    const res = await fetch("/api/attendance/check-out", { method: "POST" });
+    const res = await fetch("/api/attendance/check-out", {
+      method: "POST",
+      credentials: "include",
+    });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       setError(data?.error || "Greška pri check-out.");
       return;
     }
-    await loadToday(); // ucitaj ponovo iz baze
+    await loadToday();
+  }
+
+  // dok auth još “mota” ili radimo redirect, ne crtamo ništa
+  if (status !== "authenticated" || !user) {
+    return null;
   }
 
   const hasCheckIn = !!record?.checkIn;
   const hasCheckOut = !!record?.checkOut;
 
-  const checkInDisabled = hasCheckIn;          // ako je vec checkIn, disable
-  const checkOutDisabled = !hasCheckIn || hasCheckOut; // mora prvo checkIn, i samo jednom
+  const checkInDisabled = hasCheckIn;
+  const checkOutDisabled = !hasCheckIn || hasCheckOut;
 
   return (
-    <>
-      <Nav />
+    <main className="mx-auto max-w-3xl p-6 font-sans">
+      <h1 className="mb-2 text-2xl font-semibold">Evidencija prisustva</h1>
 
-      <main className="mx-auto max-w-3xl p-6 font-sans">
-        <h1 className="mb-2 text-2xl font-semibold">Evidencija prisustva</h1>
+      <p className="mb-6 text-zinc-600">
+        Današnji datum: <b>{today}</b>
+      </p>
 
-        <p className="mb-6 text-zinc-600">
-          Današnji datum: <b>{today}</b>
+      <div className="mb-4 flex gap-3">
+        <Button
+          text="Check in"
+          onClick={handleCheckIn}
+          disabled={checkInDisabled || loading}
+        />
+        <Button
+          text="Check out"
+          onClick={handleCheckOut}
+          disabled={checkOutDisabled || loading}
+        />
+      </div>
+
+      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+
+      {!loading && (
+        <p className="mb-6 text-sm text-green-700">
+          Status:{" "}
+          {!record
+            ? "Nema evidencije za danas."
+            : record.checkOut
+            ? `Check-out u ${new Date(record.checkOut).toLocaleTimeString(
+                "sr-RS",
+                { hour: "2-digit", minute: "2-digit" }
+              )}`
+            : `Check-in u ${new Date(record.checkIn).toLocaleTimeString(
+                "sr-RS",
+                { hour: "2-digit", minute: "2-digit" }
+              )}`}
         </p>
-
-        <div className="mb-4 flex gap-3">
-          <Button text="Check in" onClick={handleCheckIn} disabled={checkInDisabled || loading} />
-          <Button text="Check out" onClick={handleCheckOut} disabled={checkOutDisabled || loading} />
-        </div>
-
-        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
-        {!loading && (
-          <p className="mb-6 text-sm text-green-700">
-            Status:{" "}
-            {!record
-              ? "Nema evidencije za danas."
-              : record.checkOut
-              ? `Check-out u ${new Date(record.checkOut).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}`
-              : `Check-in u ${new Date(record.checkIn).toLocaleTimeString("sr-RS", { hour: "2-digit", minute: "2-digit" })}`}
-          </p>
-        )}
-      </main>
-    </>
+      )}
+    </main>
   );
 }
-
