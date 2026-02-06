@@ -1,4 +1,4 @@
-// src/app/login/page.tsx
+"use client";
 
 import AuthForm from "../../components/AuthForm";
 

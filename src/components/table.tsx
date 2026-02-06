@@ -9,7 +9,7 @@ type TableProps = {
   columns: Column[];
   data: Record<string, any>[];
 
-  // 🔽 NOVO: opcije za selekciju redova
+  // opcije za selekciju redova
   selectable?: boolean;          // da li tabela ima checkbox kolonu
   selectedIds?: number[];        // koji id-jevi su selektovani
   onToggleRow?: (id: number) => void;
