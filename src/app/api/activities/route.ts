@@ -29,7 +29,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // pronađi radni dan za tog usera i taj datum
     const wdr = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -42,7 +41,6 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!wdr[0]) {
-      // nema radnog dana => nema aktivnosti
       return NextResponse.json({ activities: [] }, { status: 200 });
     }
 
@@ -66,6 +64,102 @@ export async function GET(req: Request) {
   }
 }
 
+// POST /api/activities  { date, title, description?, startTime, endTime }
+export async function POST(req: Request) {
+  try {
+    const token = (await cookies()).get(AUTH_COOKIE)?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const claims = verifyAuthToken(token);
+    const userId = Number(claims.sub);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => null);
+    const date = String(body?.date ?? "").trim();
+    const title = String(body?.title ?? "").trim();
+    const description =
+      typeof body?.description === "string" && body.description.trim() !== ""
+        ? body.description.trim()
+        : null;
+    let startTime = String(body?.startTime ?? "").trim();
+    let endTime = String(body?.endTime ?? "").trim();
+
+    if (!date || !title || !startTime || !endTime) {
+      return NextResponse.json(
+        { error: "date, title, startTime i endTime su obavezni" },
+        { status: 400 }
+      );
+    }
+
+    // input type="time" obično šalje HH:MM -> dodamo :00
+    if (startTime.length === 5) startTime = `${startTime}:00`;
+    if (endTime.length === 5) endTime = `${endTime}:00`;
+
+    // nađi ili kreiraj work_day_record za tog usera i datum
+    const existing = await db
+      .select({ id: workDayRecords.id })
+      .from(workDayRecords)
+      .where(
+        and(
+          eq(workDayRecords.userId, userId),
+          eq(workDayRecords.workDate, date as any)
+        )
+      )
+      .limit(1);
+
+    let workDayId: number;
+
+    if (existing[0]) {
+      workDayId = existing[0].id;
+    } else {
+      const inserted = await db
+        .insert(workDayRecords)
+        .values({
+          userId,
+          workDate: date as any,
+          checkIn: null,
+          checkOut: null,
+          note: null,
+        })
+        .returning({ id: workDayRecords.id });
+
+      workDayId = inserted[0].id;
+    }
+
+    const insertedActivity = await db
+      .insert(activities)
+      .values({
+        workDayId,
+        title,
+        description,
+        // minutesSpent: će ostati default 0 u bazi
+        startTime: startTime as any,
+        endTime: endTime as any,
+      })
+      .returning({
+        id: activities.id,
+        title: activities.title,
+        description: activities.description,
+        startTime: activities.startTime,
+        endTime: activities.endTime,
+      });
+
+    const activity = insertedActivity[0];
+
+    return NextResponse.json({ activity }, { status: 201 });
+  } catch (e) {
+    console.error("POST /api/activities error", e);
+    return NextResponse.json(
+      { error: "Greska pri dodavanju aktivnosti" },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE /api/activities  { ids: number[] }
 export async function DELETE(req: Request) {
   try {
@@ -74,7 +168,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    verifyAuthToken(token); // ako pukne, baca grešku
+    verifyAuthToken(token);
 
     const body = await req.json().catch(() => null);
     const ids = (body?.ids ?? []) as number[];
