@@ -7,7 +7,7 @@ import { db } from "@/src/db";
 import { activities, workDayRecords, users } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
-// proveravamo da li je trenutni user ADMIN
+// proveravamo da li je trenutni user ADMIN ili MENADZER
 async function requireAdmin() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE)?.value;
@@ -26,7 +26,7 @@ async function requireAdmin() {
 
   const currentUser = me[0];
 
-  if (!currentUser || currentUser.roleId !== 1) {
+  if (!currentUser || (currentUser.roleId !== 1 && currentUser.roleId !== 2)) {
     return { error: "Forbidden" as const, status: 403 as const };
   }
 

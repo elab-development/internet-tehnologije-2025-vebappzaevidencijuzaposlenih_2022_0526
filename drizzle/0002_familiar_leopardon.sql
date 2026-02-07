@@ -16,3 +16,6 @@ ADD CONSTRAINT "work_day_records_chk_hours_max_8"
 CHECK (
   hours >= 0 AND hours <= 8
 );
+ALTER TABLE "activities"
+ADD CONSTRAINT "activities_chk_time_range"
+CHECK ("start_time" < "end_time");

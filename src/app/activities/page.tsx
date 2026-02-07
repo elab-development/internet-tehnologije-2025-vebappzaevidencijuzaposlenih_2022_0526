@@ -257,12 +257,22 @@ export default function ActivitiesPage() {
               disabled={loading}
             />
           )}
-
           <Button
             text={showAddForm ? "Otkaži dodavanje" : "Dodaj aktivnost"}
-            onClick={() => setShowAddForm((prev) => !prev)}
+            onClick={() => {
+              if (showAddForm) {
+                // zatvaramo formu → očisti grešku i polja
+                setError("");
+                setNewTitle("");
+                setNewDescription("");
+                setNewStartTime("");
+                setNewEndTime("");
+              }
+              setShowAddForm((prev) => !prev);
+            }}
             disabled={loading}
           />
+          
         </div>
       </div>
 
