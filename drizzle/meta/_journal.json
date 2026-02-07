@@ -15,6 +15,13 @@
       "when": 1770158037790,
       "tag": "0001_green_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770471746185,
+      "tag": "0002_familiar_leopardon",
+      "breakpoints": true
     }
   ]
 }

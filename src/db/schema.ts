@@ -40,6 +40,9 @@ export const users = pgTable(
       .notNull()
       .references(() => roles.id),
 
+    phone: text("phone"),
+    address: text("address"),
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
@@ -79,7 +82,10 @@ export const workDayRecords = pgTable(
     checkIn: timestamp("check_in"),
     checkOut: timestamp("check_out"),
 
-    note: text("note"),
+    note: text("note"), 
+
+    hours: integer("hours").notNull().default(0),  
+
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
