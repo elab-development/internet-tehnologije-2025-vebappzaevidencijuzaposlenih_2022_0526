@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "../../components/button";
 import Table from "../../components/table";
 
@@ -8,22 +9,24 @@ type ActivityRow = {
   id: number;
   title: string;
   description: string | null;
-  startTime: string; // "09:00:00"
-  endTime: string;   // "11:00:00"
+  startTime: string; 
+  endTime: string; 
 };
 
 export default function ActivitiesPage() {
+  const router = useRouter();
+
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [date, setDate] = useState(today);
+
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState<ActivityRow[]>([]);
 
-  // selektovani redovi
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-  // forma za novu aktivnost
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
@@ -40,25 +43,55 @@ export default function ActivitiesPage() {
     []
   );
 
-  // učitavanje aktivnosti za izabrani dan
+  // 0) AUTH GUARD
   useEffect(() => {
+    async function checkAuth() {
+      try {
+        const meRes = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+        });
+        const meData = await meRes.json().catch(() => null);
+        const u = meData?.user ?? null;
+
+        if (!u) {
+          router.replace("/login?next=/activities");
+          return;
+        }
+
+        setAuthChecked(true);
+      } catch {
+        router.replace("/login?next=/activities");
+      }
+    }
+
+    checkAuth();
+  }, [router]);
+
+  // 1) ucitavanje aktivnosti (tek kad prodje auth)
+  useEffect(() => {
+    if (!authChecked) return;
+
     async function load() {
       setLoading(true);
       setError("");
-      setSelectedIds([]); // reset selekcije kada promenimo datum
+      setSelectedIds([]);
 
       try {
-        const res = await fetch(
-          `/api/activities?date=${encodeURIComponent(date)}`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`/api/activities?date=${encodeURIComponent(date)}`, {
+          method: "GET",
+          credentials: "include",
+        });
 
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
+          // ako token istekne ili cookie nije tu -> vrati na login
+          if (res.status === 401) {
+            router.replace("/login?next=/activities");
+            return;
+          }
+
           setError(data?.error || `Greška (${res.status})`);
           setRows([]);
           setLoading(false);
@@ -75,39 +108,36 @@ export default function ActivitiesPage() {
     }
 
     load();
-  }, [date]);
+  }, [authChecked, date, router]);
 
-  // toggle jednog reda
   function handleToggleRow(id: number) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
 
-  // toggle svih redova
   function handleToggleAll() {
-    if (selectedIds.length === rows.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(rows.map((r) => r.id));
-    }
+    if (selectedIds.length === rows.length) setSelectedIds([]);
+    else setSelectedIds(rows.map((r) => r.id));
   }
 
-  // eksport svih ili selektovanih aktivnosti za dan
   async function handleExport() {
     setError("");
 
     try {
       const params = new URLSearchParams();
       params.set("date", date);
+      if (selectedIds.length > 0) params.set("ids", selectedIds.join(","));
 
-      if (selectedIds.length > 0) {
-        params.set("ids", selectedIds.join(","));
-      }
-
-      const res = await fetch(`/api/activities/export?${params.toString()}`);
+      const res = await fetch(`/api/activities/export?${params.toString()}`, {
+        credentials: "include",
+      });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          router.replace("/login?next=/activities");
+          return;
+        }
         const data = await res.json().catch(() => null);
         setError(data?.error || `Eksport nije uspeo (${res.status})`);
         return;
@@ -119,9 +149,7 @@ export default function ActivitiesPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download =
-        selectedIds.length > 0
-          ? `aktivnosti_${date}_selektovane.ics`
-          : `aktivnosti_${date}.ics`;
+        selectedIds.length > 0 ? `aktivnosti_${date}_selektovane.ics` : `aktivnosti_${date}.ics`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -132,12 +160,11 @@ export default function ActivitiesPage() {
     }
   }
 
-  // brisanje selektovanih
   async function handleDeleteSelected() {
     if (selectedIds.length === 0) return;
 
     const confirmDelete = window.confirm(
-      `Da li si sigurna da želiš da obrišeš ${selectedIds.length} aktivnost(i)?`
+      'Da li si sigurna da želiš da obrišeš ${selectedIds.length} aktivnost(i)?'
     );
     if (!confirmDelete) return;
 
@@ -147,17 +174,17 @@ export default function ActivitiesPage() {
       const res = await fetch("/api/activities", {
         method: "DELETE",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ids: selectedIds,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
       });
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          router.replace("/login?next=/activities");
+          return;
+        }
         setError(data?.error || `Greška pri brisanju (${res.status})`);
         return;
       }
@@ -169,12 +196,11 @@ export default function ActivitiesPage() {
     }
   }
 
-  // dodavanje nove aktivnosti
   async function handleCreateActivity(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!newTitle.trim() || !newStartTime || !newEndTime) {
+    if (!newTitle.trim() || !newStartTime ||  !newEndTime) {
       setError("Naziv i vremena su obavezni.");
       return;
     }
@@ -183,9 +209,7 @@ export default function ActivitiesPage() {
       const res = await fetch("/api/activities", {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date,
           title: newTitle.trim(),
@@ -198,21 +222,21 @@ export default function ActivitiesPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
+        if (res.status === 401) {
+          router.replace("/login?next=/activities");
+          return;
+        }
         setError(data?.error || `Greška pri dodavanju (${res.status})`);
         return;
       }
 
       const created = data?.activity as ActivityRow | undefined;
-
       if (created) {
         setRows((prev) =>
-          [...prev, created].sort((a, b) =>
-            a.startTime.localeCompare(b.startTime)
-          )
+          [...prev, created].sort((a, b) => a.startTime.localeCompare(b.startTime))
         );
       }
 
-      // reset forme
       setNewTitle("");
       setNewDescription("");
       setNewStartTime("");
@@ -223,16 +247,22 @@ export default function ActivitiesPage() {
     }
   }
 
+  // dok auth nije proverio, nema renderovanja stranice
+  if (!authChecked) {
+    return (
+      <main className="mx-auto max-w-4xl p-6 font-sans">
+        <p className="text-sm text-zinc-600">Učitavanje...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-4xl p-6 font-sans">
       <h1 className="mb-4 text-2xl font-semibold">Aktivnosti</h1>
 
-      {/* filter datuma + dugmad Obriši / Dodaj */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4 rounded-xl bg-white p-4 shadow">
         <div>
-          <label className="mb-2 block text-sm font-medium">
-            Izaberi datum
-          </label>
+          <label className="mb-2 block text-sm font-medium">Izaberi datum</label>
           <input
             type="date"
             value={date}
@@ -259,9 +289,7 @@ export default function ActivitiesPage() {
           )}
           <Button
             text={showAddForm ? "Otkaži dodavanje" : "Dodaj aktivnost"}
-            onClick={() => {
-              if (showAddForm) {
-                // zatvaramo formu → očisti grešku i polja
+            onClick={() => {if (showAddForm) {
                 setError("");
                 setNewTitle("");
                 setNewDescription("");
@@ -272,7 +300,6 @@ export default function ActivitiesPage() {
             }}
             disabled={loading}
           />
-          
         </div>
       </div>
 
@@ -282,18 +309,12 @@ export default function ActivitiesPage() {
         </p>
       )}
 
-      {/* forma za novu aktivnost */}
       {showAddForm && (
         <section className="mb-4 rounded-xl bg-white p-4 shadow">
           <h2 className="mb-3 text-lg font-semibold">Nova aktivnost</h2>
-          <form
-            onSubmit={handleCreateActivity}
-            className="grid gap-3 md:grid-cols-2"
-          >
+          <form onSubmit={handleCreateActivity} className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">
-                Vreme od
-              </label>
+              <label className="mb-1 block text-sm text-zinc-600">Vreme od</label>
               <input
                 type="time"
                 value={newStartTime}
@@ -303,9 +324,7 @@ export default function ActivitiesPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm text-zinc-600">
-                Vreme do
-              </label>
+              <label className="mb-1 block text-sm text-zinc-600">Vreme do</label>
               <input
                 type="time"
                 value={newEndTime}
@@ -315,9 +334,7 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-1 block text-sm text-zinc-600">
-                Naziv aktivnosti
-              </label>
+              <label className="mb-1 block text-sm text-zinc-600">Naziv aktivnosti</label>
               <input
                 type="text"
                 value={newTitle}
@@ -328,9 +345,7 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-1 block text-sm text-zinc-600">
-                Opis (opciono)
-              </label>
+              <label className="mb-1 block text-sm text-zinc-600">Opis (opciono)</label>
               <textarea
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
@@ -347,18 +362,13 @@ export default function ActivitiesPage() {
         </section>
       )}
 
-      {/* tabela aktivnosti */}
       <section className="rounded-xl bg-white p-4 shadow">
-        <h2 className="mb-3 text-xl font-semibold">
-          Aktivnosti za izabrani dan
-        </h2>
+        <h2 className="mb-3 text-xl font-semibold">Aktivnosti za izabrani dan</h2>
 
         {loading && <p className="text-sm text-zinc-600">Učitavanje...</p>}
 
         {!loading && rows.length === 0 && (
-          <p className="text-sm text-zinc-600">
-            Nema aktivnosti za izabrani datum.
-          </p>
+          <p className="text-sm text-zinc-600">Nema aktivnosti za izabrani datum.</p>
         )}
 
         {!loading && rows.length > 0 && (
@@ -374,14 +384,9 @@ export default function ActivitiesPage() {
         )}
       </section>
 
-      {/* dugme za eksport na dnu strane */}
       <div className="mt-6 flex justify-end">
         <Button
-          text={
-            selectedIds.length > 0
-              ? "Eksportuj selektovane"
-              : "Eksportuj sve"
-          }
+          text={selectedIds.length > 0 ? "Eksportuj selektovane" : "Eksportuj sve"}
           onClick={handleExport}
           disabled={loading || rows.length === 0}
         />

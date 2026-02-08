@@ -96,7 +96,7 @@ export default function AdminPage() {
           return;
         }
         if (u.roleId !== 1) {
-          router.push("/home");
+          router.push("/forbidden");
           return;
         }
 

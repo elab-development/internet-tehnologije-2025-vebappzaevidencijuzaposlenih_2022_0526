@@ -11,6 +11,7 @@ export type JwtUserClaims = {
   sub: string; // subject (najcesce user id)
   email: string;
   name?: string;
+  roleId: number;
 };
 
 // kreiranje JWT tokena (poziva se prilikom logina ili registracije)
@@ -33,6 +34,7 @@ export function verifyAuthToken(token: string): JwtUserClaims {
     sub: payload.sub,
     email: payload.email,
     name: payload.name,
+    roleId: payload.roleId,
   };
 }
 

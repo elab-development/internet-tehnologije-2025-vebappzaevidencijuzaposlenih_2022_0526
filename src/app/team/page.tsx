@@ -51,7 +51,7 @@ export default function TeamPage() {
     []
   );
 
-  // 1) zaštita rute: samo menadžer
+  // 1) zastita rute: samo menadžer
   useEffect(() => {
     if (status === "loading") return;
 
@@ -61,7 +61,7 @@ export default function TeamPage() {
     }
 
     if (user.roleId !== 2) {
-      router.replace("/home");
+      router.replace("/forbidden");
       return;
     }
   }, [status, user, router]);
