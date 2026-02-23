@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // input type="time" obično šalje HH:MM -> dodamo :00
+    // input type="time" obično šalje HH:MM pa dodajemo :00
     if (startTime.length === 5) startTime = `${startTime}:00`;
     if (endTime.length === 5) endTime = `${endTime}:00`;
 

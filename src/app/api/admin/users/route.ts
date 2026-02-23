@@ -40,7 +40,7 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // admin → uzmi sve korisnike
+    //  uzmi sve korisnike
     const allUsers = await db
       .select({
         id: users.id,

@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const searchParams = url.searchParams;
 
-    // 1. datum je obavezan
+    // datum je obavezan
     const date = searchParams.get("date");
 
     if (!date) {
@@ -27,8 +27,8 @@ export async function GET(req: Request) {
       );
     }
 
-    // 2. opciono: ids=1,2,3 za selektovane aktivnosti
-    const idsParam = searchParams.get("ids"); // npr "32,43"
+    // opciono: ids=1,2,3 za selektovane aktivnosti
+    const idsParam = searchParams.get("ids");
     let ids: number[] = [];
 
     if (idsParam && idsParam.trim() !== "") {
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
         .filter((n) => !Number.isNaN(n));
     }
 
-    // 3. provera autentifikacije
+    // provera autentifikacije
     const token = (await cookies()).get(AUTH_COOKIE)?.value;
     if (!token) {
       return NextResponse.json(
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // 4. nalazenje work_day_record za tog usera i datum
+    // nalazenje work_day_record za tog usera i datum
     const record = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -70,14 +70,14 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!record[0]) {
-      // nema radnog dana → nema ni aktivnosti
+      // nema radnog dana, nema ni aktivnosti
       return NextResponse.json(
         { error: "Nema aktivnosti za izabrani datum." },
         { status: 404 }
       );
     }
 
-    // 5. učitavanje aktivnosti (sve ili samo selektovane)
+    // učitavanje aktivnosti (sve ili samo selektovane)
     const baseCondition = eq(activities.workDayId, record[0].id);
 
     const whereCondition =
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
       .where(whereCondition)
       .orderBy(activities.startTime);
 
-    // 6. Generisanje .ics fajla
+    // generisanje .ics fajla
 
     // YYYYMMDD format
     const yyyymmdd = date.replace(/-/g, "");
@@ -138,7 +138,7 @@ export async function GET(req: Request) {
 
     ics += "END:VCALENDAR\r\n";
 
-    // 7. vraćanje fajla
+    // vracanje fajla
     return new Response(ics, {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",

@@ -43,7 +43,7 @@ export default function ActivitiesPage() {
     []
   );
 
-  // 0) AUTH GUARD
+  // AUTH guard
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -68,7 +68,7 @@ export default function ActivitiesPage() {
     checkAuth();
   }, [router]);
 
-  // 1) ucitavanje aktivnosti (tek kad prodje auth)
+  // ucitavanje aktivnosti (tek kad prodje auth)
   useEffect(() => {
     if (!authChecked) return;
 
@@ -86,7 +86,7 @@ export default function ActivitiesPage() {
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {
-          // ako token istekne ili cookie nije tu -> vrati na login
+          // ako token istekne ili cookie nije tu onda se vrati na login
           if (res.status === 401) {
             router.replace("/login?next=/activities");
             return;
@@ -393,4 +393,4 @@ export default function ActivitiesPage() {
       </div>
     </main>
   );
-}
+} 

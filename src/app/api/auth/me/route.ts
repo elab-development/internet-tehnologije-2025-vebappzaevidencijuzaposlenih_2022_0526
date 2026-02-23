@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
-import { users, roles } from "@/src/db/schema"; // <-- dodaj roles
+import { users, roles } from "@/src/db/schema"; 
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
 // vraca podatke o ulogovanom korisniku na osnovu jwt tokena iz auth cookie-a
@@ -22,12 +22,12 @@ export async function GET() {
         fullName: users.fullName,
         email: users.email,
         roleId: users.roleId,
-        roleName: roles.name,          // <-- ovde
+        roleName: roles.name,          
         isActive: users.isActive,
         createdAt: users.createdAt,
       })
       .from(users)
-      .innerJoin(roles, eq(users.roleId, roles.id)) // <-- join
+      .innerJoin(roles, eq(users.roleId, roles.id))
       .where(eq(users.id, Number(claims.sub)))
       .limit(1);
 
