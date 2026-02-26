@@ -1,6 +1,3 @@
-//ova ruta je da bi vratila danasnji checkin, checkout za ulogovanog korisnika
-
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { and, eq } from "drizzle-orm";
@@ -16,18 +13,33 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+async function getUserIdFromAuthCookie(): Promise<number | null> {
+  const token = (await cookies()).get(AUTH_COOKIE)?.value;
+
+  // IDOR = bez validnog JWT nema pristupa (vracamo record null)
+  if (!token) return null;
+
+  const claims = verifyAuthToken(token);
+  const userId = Number(claims.sub);
+
+  // IDOR = nevalidan userId tretiramo kao da nema ulogovanog
+  if (!Number.isInteger(userId) || userId <= 0) return null;
+
+  return userId;
+}
+
+// GET 
 export async function GET() {
   try {
-    const token = (await cookies()).get(AUTH_COOKIE)?.value;
-    if (!token) return NextResponse.json({ record: null }, { status: 200 });
+    const userId = await getUserIdFromAuthCookie();
 
-    const claims = verifyAuthToken(token);
-    const userId = Number(claims.sub);
-    if (!Number.isFinite(userId)) return NextResponse.json({ record: null }, { status: 200 });
+    // IDOR = ruta nikad ne prihvata userId iz query/body, vec uvek koristi userId iz tokena
+    if (!userId) {
+      return NextResponse.json({ record: null }, { status: 200 });
+    }
 
     const workDate = todayISO();
 
-    //trazimo zapis za danas
     const found = await db
       .select({
         id: workDayRecords.id,
@@ -36,11 +48,20 @@ export async function GET() {
         checkOut: workDayRecords.checkOut,
       })
       .from(workDayRecords)
-      .where(and(eq(workDayRecords.userId, userId), eq(workDayRecords.workDate, workDate)))
+      // SQL injection = eq/and u Drizzle prave parametrizovan upit 
+      // IDOR = filtriramo po userId iz tokena + danasnji datum
+      .where(
+        and(
+          eq(workDayRecords.userId, userId),
+          eq(workDayRecords.workDate, workDate as any)
+        )
+      )
       .limit(1);
 
-    return NextResponse.json({ record: found[0] ?? null }, { status: 200 }); //vracamo ili record ili null
-  } catch {
+    // XSS = vracamo JSON
+    return NextResponse.json({ record: found[0] ?? null }, { status: 200 });
+  } catch (e) {
+    console.error("GET /api/attendance/today error", e);
     return NextResponse.json({ record: null }, { status: 200 });
   }
 }
