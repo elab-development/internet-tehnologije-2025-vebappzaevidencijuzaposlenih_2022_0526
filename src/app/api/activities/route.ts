@@ -6,6 +6,19 @@ import { db } from "@/src/db";
 import { activities, workDayRecords } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
+
+function timeToMinutes(t: string) {
+  const [hh, mm, ss] = t.split(":").map(Number);
+  return (hh * 60) + (mm || 0); // ss ignorišemo
+}
+
+function calcMinutes(start: string, end: string) {
+  const s = timeToMinutes(start);
+  const e = timeToMinutes(end);
+  return Math.max(0, e - s);
+}
+
+
 // GET /api/activities?date=YYYY-MM-DD
 export async function GET(req: Request) {
   try {
@@ -99,6 +112,13 @@ export async function POST(req: Request) {
     if (startTime.length === 5) startTime = `${startTime}:00`;
     if (endTime.length === 5) endTime = `${endTime}:00`;
 
+      const minutes = calcMinutes(startTime, endTime);
+      if (minutes <= 0) {
+        return NextResponse.json(
+          { error: "Vreme do mora biti posle vremena od." },
+          { status: 400 }
+        );
+      }
     // nađi ili kreiraj work_day_record za tog usera i datum
     const existing = await db
       .select({ id: workDayRecords.id })
@@ -123,6 +143,7 @@ export async function POST(req: Request) {
           workDate: date as any,
           checkIn: null,
           checkOut: null,
+          hours: 0,  
           note: null,
         })
         .returning({ id: workDayRecords.id });
@@ -136,7 +157,7 @@ export async function POST(req: Request) {
         workDayId,
         title,
         description,
-        // minutesSpent: će ostati default 0 u bazi
+        minutesSpent: calcMinutes(startTime, endTime),
         startTime: startTime as any,
         endTime: endTime as any,
       })
@@ -144,6 +165,7 @@ export async function POST(req: Request) {
         id: activities.id,
         title: activities.title,
         description: activities.description,
+        minutesSpent: activities.minutesSpent,
         startTime: activities.startTime,
         endTime: activities.endTime,
       });

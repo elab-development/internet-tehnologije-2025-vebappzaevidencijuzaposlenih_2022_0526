@@ -9,6 +9,7 @@ type ActivityRow = {
   id: number;
   title: string;
   description: string | null;
+  minutesSpent: number;  
   startTime: string; 
   endTime: string; 
 };
@@ -38,6 +39,7 @@ export default function ActivitiesPage() {
       { header: "Vreme od", accessor: "startTime" },
       { header: "Vreme do", accessor: "endTime" },
       { header: "Naziv", accessor: "title" },
+       { header: "Trajanje (min)", accessor: "minutesSpent" },
       { header: "Opis", accessor: "description" },
     ],
     []

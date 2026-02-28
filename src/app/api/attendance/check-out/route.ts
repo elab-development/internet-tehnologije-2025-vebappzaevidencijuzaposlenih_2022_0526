@@ -70,12 +70,18 @@ export async function POST() {
         { status: 409 }
       );
     }
+    const checkIn = existing[0].checkIn;
 
     const now = new Date();
+    // razlika u ms
+    const diffMs = now.getTime() - new Date(checkIn).getTime();
+
+    // pretvori u sate
+    const hours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
 
     const updated = await db
       .update(workDayRecords)
-      .set({ checkOut: now })
+      .set({ checkOut: now,hours: hours, })
       // IDOR = update ogranicavamo na (id + userId) da niko ne moze da updateuje tudji zapis
       .where(and(eq(workDayRecords.id, existing[0].id), eq(workDayRecords.userId, userId)))
       .returning({
@@ -83,6 +89,7 @@ export async function POST() {
         workDate: workDayRecords.workDate,
         checkIn: workDayRecords.checkIn,
         checkOut: workDayRecords.checkOut,
+        hours: workDayRecords.hours,
       });
 
     if (!updated[0]) {

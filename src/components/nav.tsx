@@ -59,13 +59,15 @@ export default function Nav() {
   }
 
   // MENADŽER + ZAPOSLENI – zajednički nav
-  const links = [
-    { href: "/home", label: "Početna" },
-    { href: "/profile", label: "Moj profil" },
-    { href: "/activities", label: "Aktivnosti" },
-    { href: "/reports", label: "Izveštaji" },
-  ];
+// ako je menadžer (roleId === 2) vodi na /reports/manager
+const reportsHref = user.roleId === 2 ? "/reports/manager" : "/reports";
 
+const links = [
+  { href: "/home", label: "Početna" },
+  { href: "/profile", label: "Moj profil" },
+  { href: "/activities", label: "Aktivnosti" },
+  { href: reportsHref, label: "Izveštaji" },
+];
   // samo menadžeru dodaj "Moj tim"
   if (user.roleId === 2) {
     links.push({ href: "/team", label: "Moj tim" });
@@ -106,94 +108,3 @@ export default function Nav() {
   );
 }
 
-
-/*"use client";
-
-import Link from "next/link";
-import { useRouter,usePathname } from "next/navigation";
-import { useAuth } from "./AuthProvider";
-import Button from "./button";
-
-export default function Nav() {
-  const { status, user, logout } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname(); //
-
-  const isAuthenticated = status === "authenticated";
-  const isAdmin = user?.roleId === 1;
-
-  //uopšte NE prikazuj nav
-  const isLoginPage =
-    pathname === "/login" || pathname === "/login/admin";
-
-  if (isLoginPage) {
-    return null;
-  }
-
-  // Niko nije ulogovan (npr. neka public stranica) → samo naslov + link za login
-  if (!isAuthenticated) {
-    return (
-      <nav className="flex items-center justify-between border-b bg-white px-6 py-3 text-sm">
-        <span className="font-semibold">
-          Evidencija prisustva zaposlenih
-        </span>
-
-        <Link
-          href="/login"
-          className="text-blue-600 hover:underline"
-        >
-          Login
-        </Link>
-      </nav>
-    );
-  }
-
-  const onAdminPage = pathname.startsWith("/admin");
-
-  //3) ADMIN na /admin → samo „Admin panel“ + Logout
-  if (isAdmin && onAdminPage) {
-    return (
-      <nav className="flex items-center justify-between border-b bg-white px-6 py-3 text-sm">
-        <span className="font-semibold">Admin panel</span>
-
-        <Button text="Logout" onClick={logout} />
-      </nav>
-    );
-  }
-
-  //4) Svi ostali slučajevi – normalan navbar
-  return (
-    <nav className="flex items-center justify-between border-b bg-white px-6 py-3 text-sm">
-      <div className="flex items-center gap-5">
-        <span className="font-semibold">
-          Evidencija prisustva zaposlenih
-        </span>
-
-        <Link href="/home" className="hover:underline">
-          Home
-        </Link>
-        <Link href="/profile" className="hover:underline">
-          Moj profil
-        </Link>
-        <Link href="/activities" className="hover:underline">
-          Aktivnosti
-        </Link>
-        <Link href="/reports" className="hover:underline">
-          Izveštaji
-        </Link>
-
-        
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className="font-medium text-blue-600 hover:underline"
-          >
-            Admin
-          </Link>
-        )}
-      </div>
-
-      <Button text="Logout" onClick={logout} />
-    </nav>
-  );
-}*/
