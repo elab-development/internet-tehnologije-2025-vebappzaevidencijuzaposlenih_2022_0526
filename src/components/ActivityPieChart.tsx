@@ -29,7 +29,7 @@ export default function ActivityPieChart({ data }: ActivityPieChartProps) {
     title: "Udeo aktivnosti u radnom vremenu",
     legend: { position: "right" as const },
     chartArea: { width: "80%", height: "80%" },
-    pieHole: 0, // 0 = običan pie; stavi 0.4 za donut
+    pieHole: 0, // 0 = običan pie a mozemo da stavimo i 0.4 za donut chart
     sliceVisibilityThreshold: 0, // prikaži i male "slice"-ove
   };
 

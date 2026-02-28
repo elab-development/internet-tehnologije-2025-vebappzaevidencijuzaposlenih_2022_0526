@@ -84,7 +84,7 @@ export const workDayRecords = pgTable(
 
     note: text("note"), 
 
-    hours: integer("hours").notNull().default(0),  
+    hours: integer("hours").notNull(),  
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
