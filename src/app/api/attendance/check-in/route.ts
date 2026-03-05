@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { workDayRecords } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
+import { isHoliday } from "@/src/lib/holidays";
 
 function todayISO() {
   const d = new Date();
@@ -21,6 +22,15 @@ export async function POST() {
     const claims = verifyAuthToken(token);
     const userId = Number(claims.sub);
     const workDate = todayISO();
+
+    //provera praznika (backend zastita)
+    const holiday = await isHoliday(workDate, "RS");
+    if (holiday) {
+      return NextResponse.json(
+        { error: `Danas je praznik (${holiday.localName}) – check-in nije dozvoljen.` },
+        { status: 409 }
+      );
+    }
 
     //da li vec postoji zapis danas??
     const existing = await db

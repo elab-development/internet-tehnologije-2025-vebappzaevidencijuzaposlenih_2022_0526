@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/src/db";
 import { activities, workDayRecords } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
+import { isHoliday } from "@/src/lib/holidays";
 
 // GET /api/activities?date=YYYY-MM-DD
 export async function GET(req: Request) {
@@ -92,6 +93,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "date, title, startTime i endTime su obavezni" },
         { status: 400 }
+      );
+    }
+
+    const holiday = await isHoliday(date, "RS");
+    if (holiday) {
+      return NextResponse.json(
+        { error: `Izabrani datum je praznik (${holiday.localName}) – dodavanje aktivnosti nije dozvoljeno.` },
+        { status: 409 }
       );
     }
 

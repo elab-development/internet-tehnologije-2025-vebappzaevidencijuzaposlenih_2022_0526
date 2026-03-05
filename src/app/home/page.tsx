@@ -16,14 +16,16 @@ export default function HomePage() {
   const router = useRouter();
   const { status, user } = useAuth();
 
-  const today = new Date().toLocaleDateString("sr-RS");
+  const todayISO = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD" koristimo za poredjenje i API
+  const todayLabel = new Date().toLocaleDateString("sr-RS"); // ovaj format koristimo samo za prikaz
 
   // SVI hookovi su gore, bez uslova
   const [loading, setLoading] = useState(true);
   const [record, setRecord] = useState<TodayRecord>(null);
   const [error, setError] = useState("");
+  const [holidayName, setHolidayName] = useState<string | null>(null);
 
-  // ako nije ulogovan → redirect na /login
+  // ako nije ulogovan -> redirect na /login
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login");
@@ -38,6 +40,23 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, user]);
 
+  //provera praznika
+  useEffect(() => {
+    async function checkHoliday() {
+      const year = todayISO.slice(0, 4);
+      
+      const res = await fetch(`/api/external/holidays?year=${year}&country=RS`, {
+        credentials: "include",
+      });
+
+      const data = await res.json().catch(() => null);
+      const found = data?.holidays?.find((h: any) => h.date === todayISO);
+
+      setHolidayName(found ? String(found.localName) : null);
+    }
+
+    checkHoliday();
+  }, [todayISO]);
   async function loadToday() {
     setLoading(true);
     setError("");
@@ -96,14 +115,14 @@ export default function HomePage() {
       <h1 className="mb-2 text-2xl font-semibold">Evidencija prisustva</h1>
 
       <p className="mb-6 text-zinc-600">
-        Današnji datum: <b>{today}</b>
+        Današnji datum: <b>{todayLabel}</b>
       </p>
 
       <div className="mb-4 flex gap-3">
         <Button
           text="Check in"
           onClick={handleCheckIn}
-          disabled={checkInDisabled || loading}
+          disabled={checkInDisabled || loading || !!holidayName}
         />
         <Button
           text="Check out"
@@ -113,7 +132,11 @@ export default function HomePage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
+      {holidayName && (
+        <p className="text-sm text-red-600">
+          Danas je praznik: <b>{holidayName}</b>. Check-in nije dozvoljen.
+        </p>
+      )}
       {!loading && (
         <p className="mb-6 text-sm text-green-700">
           Status:{" "}
