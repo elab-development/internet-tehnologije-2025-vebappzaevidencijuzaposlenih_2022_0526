@@ -43,11 +43,7 @@ function isPublicPath(pathname: string) {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
+  if (isPublicPath(pathname)) {return NextResponse.next();}
   const token = req.cookies.get(AUTH_COOKIE)?.value;
 
   // 1) nije ulogovan? redirect na /login
@@ -57,28 +53,23 @@ export function middleware(req: NextRequest) {
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-
-  // 2) dekoramo payload da znamo ulogu (roleId)
+  // 2) dekoramo payload da saznamo ulogu (roleId)
   const payload = readJwtPayload(token);
   const roleId = Number(payload?.roleId ?? 0);
-
   // redirect na forbidden 
   const redirectForbidden = () => {
     const url = req.nextUrl.clone();
     url.pathname = "/forbidden";
     return NextResponse.redirect(url);
   };
-
   // 3) RBAC
   if (pathname.startsWith("/admin")) {
     if (roleId !== 1) return redirectForbidden();
   }
-
   if (pathname.startsWith("/team")) {
     if (roleId !== 2) return redirectForbidden();
   }
-
-  // ostalo: samo mora biti ulogovan
+  // sve ostalo: samo mora biti ulogovan
   return NextResponse.next();
 }
 

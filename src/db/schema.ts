@@ -39,7 +39,6 @@ export const users = pgTable(
     roleId: integer("role_id")
       .notNull()
       .references(() => roles.id),
-
     phone: text("phone"),
     address: text("address"),
 
@@ -50,7 +49,8 @@ export const users = pgTable(
   })
 );
 
-// veza korisnik–grupa (više-na-više)
+
+//veza korisnik–grupa (vise-na-vise)
 export const userGroups = pgTable(
   "user_groups",
   {

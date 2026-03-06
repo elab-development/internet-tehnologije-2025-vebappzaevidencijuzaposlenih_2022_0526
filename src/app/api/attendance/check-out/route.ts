@@ -79,9 +79,17 @@ export async function POST() {
     // pretvori u sate
     const hours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
 
+<<<<<<< HEAD
     const updated = await db
       .update(workDayRecords)
       .set({ checkOut: now,hours: hours, })
+=======
+    const now = new Date();
+
+    const updated = await db
+      .update(workDayRecords)
+      .set({ checkOut: now })
+>>>>>>> origin/feature/security
       // IDOR = update ogranicavamo na (id + userId) da niko ne moze da updateuje tudji zapis
       .where(and(eq(workDayRecords.id, existing[0].id), eq(workDayRecords.userId, userId)))
       .returning({
@@ -106,4 +114,7 @@ export async function POST() {
     return NextResponse.json({ error: "Greška na serveru." }, { status: 500 });
   }
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/feature/security

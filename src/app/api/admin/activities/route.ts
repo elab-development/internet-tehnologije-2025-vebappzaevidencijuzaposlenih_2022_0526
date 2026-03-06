@@ -4,11 +4,24 @@ import { cookies } from "next/headers";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/src/db";
-import { activities, workDayRecords, users } from "@/src/db/schema";
+import { activities, workDayRecords, users, userGroups } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
+import {
+  adminActivitiesCreateBodySchema,
+  adminActivitiesPatchBodySchema,
+  activitiesDeleteBodySchema,
+  dateSchema,
+} from "@/src/lib/validator";
 
-// proveravamo da li je trenutni user ADMIN ili MENADZER
-async function requireAdmin() {
+// 09:00 prabcujemo u 09:00:00 (da bi bilo kompatibilno sa SQL time)
+function normalizeTime(t: string): string {
+  const s = String(t ?? "").trim();
+  if (!s) return "";
+  return s.length === 5 ? `${s}:00` : s;
+}
+
+// ADMIN ili MENADZER (roleId 1 ili 2) + mora biti aktivan
+async function requireAdminOrManager() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE)?.value;
 
@@ -19,45 +32,100 @@ async function requireAdmin() {
   const claims = verifyAuthToken(token);
 
   const me = await db
-    .select({ id: users.id, roleId: users.roleId })
+    .select({ id: users.id, roleId: users.roleId, isActive: users.isActive })
     .from(users)
+    // [SQLi] Drizzle koristi parametre, ne spaja SQL string
     .where(eq(users.id, Number(claims.sub)))
     .limit(1);
 
   const currentUser = me[0];
 
-  if (!currentUser || (currentUser.roleId !== 1 && currentUser.roleId !== 2)) {
+  // IDOR = blokiramo neaktivne naloge (ne smeju nista da rade)
+  if (!currentUser || !currentUser.isActive) {
+    return { error: "Forbidden" as const, status: 403 as const };
+  }
+
+  // IDOR RBAC: samo ADMIN (1) ili MENADZER (2) 
+  if (currentUser.roleId !== 1 && currentUser.roleId !== 2) {
     return { error: "Forbidden" as const, status: 403 as const };
   }
 
   return { currentUser };
 }
 
+// MENADZER sme samo nad zaposlenim koji deli bar jednu grupu sa njim
+async function managerCanAccessUser(managerId: number, employeeId: number) {
+  // IDOR = menadzer sme samo nad svojim timom 
+
+  const mgrGroups = await db
+    .select({ groupId: userGroups.groupId })
+    .from(userGroups)
+    // SQL injection = parametarski upit
+    .where(eq(userGroups.userId, managerId));
+
+  const groupIds = mgrGroups.map((g) => g.groupId);
+  if (groupIds.length === 0) return false;
+
+  const shared = await db
+    .select({ ok: users.id })
+    .from(userGroups)
+    .innerJoin(users, eq(users.id, userGroups.userId))
+    .where(
+      and(
+        // SQL injection = parametarski upit + inArray
+        eq(userGroups.userId, employeeId),
+        inArray(userGroups.groupId, groupIds),
+        eq(users.isActive, true),
+        eq(users.roleId, 3) // zaposleni
+      )
+    )
+    .limit(1);
+
+  return Boolean(shared[0]);
+}
+
 // GET /api/admin/activities?userId=3&date=YYYY-MM-DD
 export async function GET(req: Request) {
   try {
-    const adminCheck = await requireAdmin();
-    if ("error" in adminCheck) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
+    const auth = await requireAdminOrManager();
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const url = new URL(req.url);
     const userId = Number(url.searchParams.get("userId") ?? 0);
-    const date = String(url.searchParams.get("date") ?? "").trim();
+    const dateRaw = String(url.searchParams.get("date") ?? "").trim();
 
-    if (!userId || !date) {
+    // XSS = validacija inputa (ne pustamo proizvoljan tekst u bazu)
+    if (!userId || !dateRaw) {
       return NextResponse.json(
         { error: "userId i date su obavezni" },
         { status: 400 }
       );
     }
 
+    // XSS = zod validacija datuma (format + realan datum)
+    const dateParsed = dateSchema.safeParse(dateRaw);
+    if (!dateParsed.success) {
+      return NextResponse.json(
+        { error: dateParsed.error.issues[0]?.message ?? "Neispravan datum." },
+        { status: 400 }
+      );
+    }
+    const date = dateParsed.data;
+
+    // IDOR = menadzer sme samo nad svojim timom
+    if (auth.currentUser.roleId === 2) {
+      const ok = await managerCanAccessUser(auth.currentUser.id, userId);
+      if (!ok) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const wdr = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
+      // SQL injection =  parametarski uslovi (eq/and)
       .where(
         and(
           eq(workDayRecords.userId, userId),
@@ -67,6 +135,7 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!wdr[0]) {
+      // XSS = vraćamo JSON (ne renderujemo HTML)
       return NextResponse.json({ activities: [] }, { status: 200 });
     }
 
@@ -79,9 +148,11 @@ export async function GET(req: Request) {
         endTime: activities.endTime,
       })
       .from(activities)
+      // SQL Injection = parametarski where
       .where(eq(activities.workDayId, wdr[0].id))
       .orderBy(activities.startTime);
 
+    // XSS = vraćamo JSON (ne renderujemo HTML)
     return NextResponse.json({ activities: rows }, { status: 200 });
   } catch (e) {
     console.error("GET /api/admin/activities error", e);
@@ -93,43 +164,50 @@ export async function GET(req: Request) {
 }
 
 // POST /api/admin/activities
-// body: { userId, date, title, description?, startTime, endTime }
 export async function POST(req: Request) {
   try {
-    const adminCheck = await requireAdmin();
-    if ("error" in adminCheck) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
+    const auth = await requireAdminOrManager();
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     const body = await req.json().catch(() => null);
 
-    const userId = Number(body?.userId ?? 0);
-    const date = String(body?.date ?? "").trim();
-    const title = String(body?.title ?? "").trim();
-    const description =
-      typeof body?.description === "string" && body.description.trim() !== ""
-        ? body.description.trim()
-        : null;
-    let startTime = String(body?.startTime ?? "").trim();
-    let endTime = String(body?.endTime ?? "").trim();
-
-    if (!userId || !date || !title || !startTime || !endTime) {
+    // XSS = zod validacija bodyja (tipovi, duzine, format)
+    const parsed = adminActivitiesCreateBodySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "userId, date, title, startTime i endTime su obavezni" },
+        { error: parsed.error.issues[0]?.message ?? "Neispravan zahtev." },
         { status: 400 }
       );
     }
 
-    if (startTime.length === 5) startTime = `${startTime}:00`;
-    if (endTime.length === 5) endTime = `${endTime}:00`;
+    const userId = parsed.data.userId;
+    const date = parsed.data.date;
 
-    // nađi ili kreiraj work_day_record za tog usera i datum
+    // ZSS = normalizacija teksta (trim + null ako je prazan opis)
+    const title = parsed.data.title.trim();
+    const description =
+      typeof parsed.data.description === "string" &&
+        parsed.data.description.trim() !== ""
+        ? parsed.data.description.trim()
+        : null;
+
+    const startTime = normalizeTime(parsed.data.startTime);
+    const endTime = normalizeTime(parsed.data.endTime);
+
+    // IDOR = menadzer sme samo nad svojim timom
+    if (auth.currentUser.roleId === 2) {
+      const ok = await managerCanAccessUser(auth.currentUser.id, userId);
+      if (!ok) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const existing = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
+      // SQL Injection =  parametarski uslovi
       .where(
         and(
           eq(workDayRecords.userId, userId),
@@ -145,11 +223,13 @@ export async function POST(req: Request) {
     } else {
       const inserted = await db
         .insert(workDayRecords)
+        // SQL Injection = insert kroz ORM (parametarski)
         .values({
           userId,
           workDate: date as any,
           checkIn: null,
           checkOut: null,
+          hours: 0,
           note: null,
         })
         .returning({ id: workDayRecords.id });
@@ -159,6 +239,7 @@ export async function POST(req: Request) {
 
     const insertedActivity = await db
       .insert(activities)
+      // SQL Injection = insert kroz ORM (parametarski)
       .values({
         workDayId,
         title,
@@ -174,6 +255,7 @@ export async function POST(req: Request) {
         endTime: activities.endTime,
       });
 
+    // XSS = vraćamo JSON (ne renderujemo HTML)
     return NextResponse.json(
       { activity: insertedActivity[0] },
       { status: 201 }
@@ -187,61 +269,62 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH /api/admin/activities
-// body: { id, title?, description?, startTime?, endTime? }
+// PATCH (sme samo ADMIN)
 export async function PATCH(req: Request) {
   try {
-    const adminCheck = await requireAdmin();
-    if ("error" in adminCheck) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
+    const auth = await requireAdminOrManager();
+    if ("error" in auth) {
+      return NextResponse.json({
+        error: auth.
+          error
+      }, { status: auth.status });
+    }
+
+    //IDOR = samo ADMIN sme da menja aktivnosti
+    if (auth.currentUser.roleId !== 1) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json().catch(() => null);
-    const id = Number(body?.id ?? 0);
 
-    if (!id) {
+    // XSS =  zod validacija patch bodyja
+    const parsed = adminActivitiesPatchBodySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "id je obavezan" },
+        { error: parsed.error.issues[0]?.message ?? "Neispravan zahtev." },
         { status: 400 }
       );
     }
 
-    const updates: any = {};
+    const { id } = parsed.data;
 
-    if (typeof body?.title === "string") {
-      const t = body.title.trim();
+    // XSS =  setujemo samo validna polja
+    const updates: Record<string, any> = {};
+
+    if (parsed.data.title !== undefined) {
+      const t = parsed.data.title.trim();
       if (t) updates.title = t;
     }
 
-    if (typeof body?.description === "string") {
-      const d = body.description.trim();
-      updates.description = d === "" ? null : d;
+    if (parsed.data.description !== undefined) {
+      const d = parsed.data.description;
+      if (d === null) updates.description = null;
+      else updates.description = d.trim() === "" ? null : d.trim();
     }
 
-    if (typeof body?.startTime === "string") {
-      let s = body.startTime.trim();
-      if (s.length === 5) s = `${s}:00`;
-      updates.startTime = s as any;
+    if (parsed.data.startTime !== undefined) {
+      const s = normalizeTime(parsed.data.startTime);
+      if (s) updates.startTime = s as any;
     }
 
-    if (typeof body?.endTime === "string") {
-      let e = body.endTime.trim();
-      if (e.length === 5) e = `${e}:00`;
-      updates.endTime = e as any;
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "Nema polja za izmenu" },
-        { status: 400 }
-      );
+    if (parsed.data.endTime !== undefined) {
+      const e = normalizeTime(parsed.data.endTime);
+      if (e) updates.endTime = e as any;
     }
 
     const updated = await db
       .update(activities)
+      // SQL injecition =  update kroz ORM (parametarski)
       .set(updates)
       .where(eq(activities.id, id))
       .returning({
@@ -259,6 +342,7 @@ export async function PATCH(req: Request) {
       );
     }
 
+    // XSS = vraćamo JSON (ne renderujemo HTML)
     return NextResponse.json({ activity: updated[0] }, { status: 200 });
   } catch (e) {
     console.error("PATCH /api/admin/activities error", e);
@@ -269,30 +353,38 @@ export async function PATCH(req: Request) {
   }
 }
 
-// DELETE /api/admin/activities
-// body: { ids: number[] }
+// DELETE  (sme samo ADMIN)
 export async function DELETE(req: Request) {
   try {
-    const adminCheck = await requireAdmin();
-    if ("error" in adminCheck) {
-      return NextResponse.json(
-        { error: adminCheck.error },
-        { status: adminCheck.status }
-      );
+    const auth = await requireAdminOrManager();
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // IDOR = samo ADMIN sme da brise aktivnosti
+    if (auth.currentUser.roleId !== 1) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json().catch(() => null);
-    const ids = (body?.ids ?? []) as number[];
 
-    if (!Array.isArray(ids) || ids.length === 0) {
+    // XSS =  Zod validacija body-ja (ids mora biti niz pozitivnih int)
+    const parsed = activitiesDeleteBodySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Lista id-jeva je obavezna" },
+        { error: parsed.error.issues[0]?.message ?? "Neispravan zahtev." },
         { status: 400 }
       );
     }
 
-    await db.delete(activities).where(inArray(activities.id, ids));
+    const ids = parsed.data.ids;
 
+    await db
+      .delete(activities)
+      // SQL injection =  delete kroz ORM (parametarski + inArray)
+      .where(inArray(activities.id, ids));
+
+    // XSS =  vracamo JSON
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     console.error("DELETE /api/admin/activities error", e);

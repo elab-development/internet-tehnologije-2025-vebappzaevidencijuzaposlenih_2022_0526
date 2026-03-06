@@ -1,3 +1,4 @@
+//src/components/AuthForm
 "use client";
 
 import { FormEvent, useState } from "react";
@@ -15,7 +16,7 @@ type AuthFormProps = {
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
-  const { refresh, logout } = useAuth(); // dodali smo logout
+  const { refresh, logout } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +37,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        // pošalji i mode, da i backend zna odakle je login
         body: JSON.stringify({
           email,
           password,
@@ -62,7 +62,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       const meData = await meRes.json().catch(() => null);
       const me = meData?.user ?? null;
 
-      // --- DODATNE PROVERE ---
+      // DODATNE PROVERE
 
       if (isAdminMode) {
   // ADMIN LOGIN FORMA: mora da bude admin
@@ -74,16 +74,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
     });
 
     setError("Ovaj nalog nema administratorska prava.");
-    // ostajemo na /login/admin, samo prikažemo poruku
+    // ostajemo na /login/admin, samo prikazemo poruku
     return;
   }
 
-  // ako jeste admin, idemo na admin panel
+  // ako jeste admin - idemo na admin panel
   router.replace("/admin");
   return;
 
 
-// običan login zaposlenog
+// obican login zaposlenog
 router.replace("/home");
       } else {
         // ZAPOSLENI LOGIN FORMA: admin NE sme da se prijavi ovde

@@ -14,7 +14,7 @@ export type JwtUserClaims = {
   roleId: number;
 };
 
-// kreiranje JWT tokena (poziva se prilikom logina ili registracije)
+// kreiranje JWT tokena (poziva se prilikom logina)
 export function signAuthToken(claims: JwtUserClaims) {
   return jwt.sign(claims, JWT_SECRET, {
     algorithm: "HS256",

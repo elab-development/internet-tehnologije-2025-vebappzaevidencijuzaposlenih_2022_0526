@@ -166,7 +166,7 @@ export default function ActivitiesPage() {
     if (selectedIds.length === 0) return;
 
     const confirmDelete = window.confirm(
-      'Da li si sigurna da želiš da obrišeš ${selectedIds.length} aktivnost(i)?'
+      `Da li si sigurna da želiš da obrišeš ${selectedIds.length} aktivnost(i)?`
     );
     if (!confirmDelete) return;
 
