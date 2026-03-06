@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { workDayRecords } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
+import { isHoliday } from "@/src/lib/holidays";
 
 function todayISO() {
   const d = new Date();
@@ -35,7 +36,18 @@ export async function POST() {
       return NextResponse.json({ error: "Niste ulogovani." }, { status: 401 });
     }
 
+
     const workDate = todayISO();
+
+    //provera praznika (backend zastita)
+    const holiday = await isHoliday(workDate, "RS");
+    if (holiday) {
+      return NextResponse.json(
+        { error: `Danas je praznik (${holiday.localName}) – check-in nije dozvoljen.` },
+        { status: 409 }
+      );
+    }
+
     const now = new Date();
 
     // SQL injection = Drizzle eq/and pravi parametrizovane upite (bez SQL konkatenacije)
@@ -65,6 +77,7 @@ export async function POST() {
         .values({
           userId, // IDOR = zapis je vezan za ulogovanog usera (ne moze za nikoga drugoga)
           workDate: workDate as any,
+          hours: 0,
           checkIn: now,
         })
         .returning({

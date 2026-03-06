@@ -34,6 +34,9 @@ export default function ActivitiesPage() {
   const [newStartTime, setNewStartTime] = useState("");
   const [newEndTime, setNewEndTime] = useState("");
 
+//state koji nam je potreban za eksterni api holidays
+  const [holidayName, setHolidayName] = useState<string | null>(null);
+
   const columns = useMemo(
     () => [
       { header: "Vreme od", accessor: "startTime" },
@@ -111,6 +114,29 @@ export default function ActivitiesPage() {
 
     load();
   }, [authChecked, date, router]);
+
+  // provera praznika nakon sto se izabere datum
+  useEffect(() => {
+  async function checkHoliday() {
+    try {
+      const year = date.slice(0, 4);
+
+      const res = await fetch(`/api/external/holidays?year=${year}&country=RS`, {
+        credentials: "include",
+      });
+
+      const data = await res.json().catch(() => null);
+      const found = data?.holidays?.find((h: any) => h.date === date);
+
+      setHolidayName(found ? String(found.localName) : null);
+    } catch {
+      setHolidayName(null);
+    }
+  }
+
+  checkHoliday();
+}, [date]);
+
 
   function handleToggleRow(id: number) {
     setSelectedIds((prev) =>
@@ -274,6 +300,11 @@ export default function ActivitiesPage() {
           <p className="mt-2 text-sm text-zinc-600">
             Izabrani datum: <b>{date}</b>
           </p>
+          {holidayName && (
+            <p className="mt-1 text-sm text-red-600">
+              Neradni dan: {holidayName}
+            </p>
+          )}
           {selectedIds.length > 0 && (
             <p className="mt-1 text-xs text-zinc-500">
               Selektovano aktivnosti: <b>{selectedIds.length}</b>
@@ -300,7 +331,7 @@ export default function ActivitiesPage() {
               }
               setShowAddForm((prev) => !prev);
             }}
-            disabled={loading}
+            disabled={loading || !!holidayName}
           />
         </div>
       </div>
@@ -308,6 +339,12 @@ export default function ActivitiesPage() {
       {error && (
         <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
+        </p>
+      )}
+
+      {holidayName && (
+        <p className="mt-2 text-sm text-red-600">
+          Izabrani datum je praznik: <b>{holidayName}</b>. Dodavanje aktivnosti nije dozvoljeno.
         </p>
       )}
 
@@ -358,7 +395,7 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="md:col-span-2 flex justify-end">
-              <Button text="Sačuvaj aktivnost" type="submit" />
+              <Button text="Sačuvaj aktivnost" type="submit" disabled={!!holidayName} />
             </div>
           </form>
         </section>

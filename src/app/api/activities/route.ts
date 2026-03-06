@@ -11,6 +11,7 @@ import {
   activitiesCreateBodySchema,
   activitiesDeleteBodySchema,
 } from "@/src/lib/validator";
+import { isHoliday } from "@/src/lib/holidays";
 
 // "09:00" -> "09:00:00" (kompatibilno sa SQL time)
 function normalizeTime(t: string): string {
@@ -125,6 +126,15 @@ export async function POST(req: Request) {
     }
 
     const date = parsed.data.date;
+    const holiday = await isHoliday(date, "RS");
+    if (holiday) {
+      return NextResponse.json(
+        { error: `Izabrani datum je praznik (${holiday.localName}) – dodavanje aktivnosti nije dozvoljeno.` },
+        { status: 409 }
+      );
+    }
+
+    
 
     // XSS=  sanitizacija user inputa
     const title = sanitizeText(parsed.data.title);
@@ -133,8 +143,12 @@ export async function POST(req: Request) {
         ? sanitizeText(parsed.data.description)
         : null;
 
-    const startTime = normalizeTime(parsed.data.startTime);
-    const endTime = normalizeTime(parsed.data.endTime);
+    let startTime = normalizeTime(parsed.data.startTime);
+    let endTime = normalizeTime(parsed.data.endTime);
+
+    // input type="time" obično šalje HH:MM -> dodamo :00
+    if (startTime.length === 5) startTime = `${startTime}:00`;
+    if (endTime.length === 5) endTime = `${endTime}:00`;
 
     // SQL injection =  parametarski upit
     // IDOR =  work_day_record pravimo/koristimo samo za ulogovanog usera
