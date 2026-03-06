@@ -6,6 +6,8 @@ CREATE TABLE "activities" (
 	"work_day_id" integer NOT NULL,
 	"title" text NOT NULL,
 	"description" text,
+	"start_time" time NOT NULL,
+ 	"end_time" time NOT NULL,
 	"minutes_spent" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -52,8 +54,9 @@ CREATE TABLE "work_day_records" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
 	"work_date" date NOT NULL,
-	"check_in" timestamp NOT NULL,
+	"check_in" timestamp,
 	"check_out" timestamp,
+	"hours" integer DEFAULT 0 NOT NULL,
 	"note" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );

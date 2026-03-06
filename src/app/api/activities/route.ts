@@ -1,4 +1,3 @@
-// src/app/api/activities/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { and, eq, inArray } from "drizzle-orm";
@@ -21,7 +20,6 @@ function normalizeTime(t: string): string {
 }
 
 // XSS = trimujemo/normalizujemo tekst pre upisa u bazu
-// ovde samo uklanjamo nove redove/NULL karaktere 
 function sanitizeText(value: unknown): string {
   return String(value ?? "")
     .replace(/\0/g, "")
@@ -29,7 +27,18 @@ function sanitizeText(value: unknown): string {
     .trim();
 }
 
-// IDOR = userId vadimo iskljucivo iz JWT (cookie), necemo iz req 
+// minutesSpent = razlika izmedju pocetka i kraja u minutima
+function calculateMinutesSpent(startTime: string, endTime: string): number {
+  const [startH, startM] = startTime.slice(0, 5).split(":").map(Number);
+  const [endH, endM] = endTime.slice(0, 5).split(":").map(Number);
+
+  const startTotal = startH * 60 + startM;
+  const endTotal = endH * 60 + endM;
+
+  return endTotal - startTotal;
+}
+
+// IDOR = userId vadimo iskljucivo iz JWT (cookie), necemo iz req
 async function getUserIdFromAuthCookie(): Promise<number | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE)?.value;
@@ -42,7 +51,7 @@ async function getUserIdFromAuthCookie(): Promise<number | null> {
   return userId;
 }
 
-// GET 
+// GET
 export async function GET(req: Request) {
   try {
     // IDOR = ulogovan user sme da vidi SVOJE aktivnosti
@@ -53,7 +62,7 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
 
-    // SQL injection + XSS = zod validacija query parametara (dozvoljavamo samo validan date format)
+    // SQL injection + XSS = zod validacija query parametara
     const parsed = activitiesGetQuerySchema.safeParse({
       date: url.searchParams.get("date"),
     });
@@ -67,8 +76,8 @@ export async function GET(req: Request) {
 
     const date = parsed.data.date;
 
-    // SQL injection =  Drizzle koristi parametarske upite (eq/and), nema spajanja SQL stringova
-    // IDOR =  workDayRecords trazimo samo za ovog usera
+    // SQL injection = Drizzle koristi parametarske upite
+    // IDOR = workDayRecords trazimo samo za ovog usera
     const wdr = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -84,7 +93,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ activities: [] }, { status: 200 });
     }
 
-    // SQL injection =  parametarski uslov
     const rows = await db
       .select({
         id: activities.id,
@@ -108,7 +116,7 @@ export async function GET(req: Request) {
 // POST body je: { date, title, description?, startTime, endTime }
 export async function POST(req: Request) {
   try {
-    // [IDOR] Aktivnost se uvek kreira za ulogovanog user-a (userId iz JWT)
+    // IDOR = aktivnost se uvek kreira za ulogovanog usera
     const userId = await getUserIdFromAuthCookie();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -116,42 +124,53 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => null);
 
-    // SQL injection + XSS =  Zod validacija bodyja (format datuma/vremena + duzine stringova)
+    // SQL injection + XSS = Zod validacija bodyja
     const parsed = activitiesCreateBodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Neispravan zahtev." },
         { status: 400 }
-);
+      );
     }
 
-    const date = parsed.data.date;
+const date = parsed.data.date;
+
     const holiday = await isHoliday(date, "RS");
     if (holiday) {
       return NextResponse.json(
-        { error: `Izabrani datum je praznik (${holiday.localName}) – dodavanje aktivnosti nije dozvoljeno.` },
+        {
+          error: `Izabrani datum je praznik (${holiday.localName}) - dodavanje aktivnosti nije dozvoljeno.`,
+        },
         { status: 409 }
       );
     }
 
-    
-
-    // XSS=  sanitizacija user inputa
+    // XSS = sanitizacija user inputa
     const title = sanitizeText(parsed.data.title);
     const description =
-      typeof parsed.data.description === "string" && parsed.data.description.trim() !== ""
+      typeof parsed.data.description === "string" &&
+      parsed.data.description.trim() !== ""
         ? sanitizeText(parsed.data.description)
         : null;
 
     let startTime = normalizeTime(parsed.data.startTime);
     let endTime = normalizeTime(parsed.data.endTime);
 
-    // input type="time" obično šalje HH:MM -> dodamo :00
+    // input type="time" obicno salje HH:MM -> dodamo :00
     if (startTime.length === 5) startTime = `${startTime}:00`;
     if (endTime.length === 5) endTime = `${endTime}:00`;
 
-    // SQL injection =  parametarski upit
-    // IDOR =  work_day_record pravimo/koristimo samo za ulogovanog usera
+    const minutesSpent = calculateMinutesSpent(startTime, endTime);
+
+    if (minutesSpent <= 0) {
+      return NextResponse.json(
+        { error: "Vreme zavrsetka mora biti posle vremena pocetka." },
+        { status: 400 }
+      );
+    }
+
+    // SQL injection = parametarski upit
+    // IDOR = work_day_record pravimo/koristimo samo za ulogovanog usera
     const existing = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -175,7 +194,7 @@ export async function POST(req: Request) {
           workDate: date as any,
           checkIn: null,
           checkOut: null,
-          hours: 0,  
+          hours: 0,
           note: null,
         })
         .returning({ id: workDayRecords.id });
@@ -183,13 +202,14 @@ export async function POST(req: Request) {
       workDayId = inserted[0].id;
     }
 
-    // SQL injection = insert je parametarski; nema concat string 
+    // SQL injection = insert je parametarski
     const insertedActivity = await db
       .insert(activities)
       .values({
         workDayId,
         title,
         description,
+        minutesSpent,
         startTime: startTime as any,
         endTime: endTime as any,
       })
@@ -215,7 +235,7 @@ export async function POST(req: Request) {
 // DELETE = { ids: number[] }
 export async function DELETE(req: Request) {
   try {
-    // IDOR =  brisanje dozvoljeno samo ulogovanom useru
+    // IDOR = brisanje dozvoljeno samo ulogovanom useru
     const userId = await getUserIdFromAuthCookie();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -223,7 +243,7 @@ export async function DELETE(req: Request) {
 
     const body = await req.json().catch(() => null);
 
-    // SQL injection + XSS = zod validacija bodyja (ids moraju biti pozitivni int brojevi)
+    // SQL injection + XSS = zod validacija bodyja
     const parsed = activitiesDeleteBodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -234,8 +254,7 @@ export async function DELETE(req: Request) {
 
     const ids = parsed.data.ids;
 
-    // IDOR =  brisemo samo aktivnosti koje pripadaju ulogovanom useru
-    // 1) uzmemo workDayRecords idjeve tog usera
+    // IDOR = brisemo samo aktivnosti koje pripadaju ulogovanom useru
     const myWorkDays = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -247,8 +266,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    // 2) obrisemo samo aktivnosti koje su: u ids listi i pripadaju nekom od mojih workDayId
-    // SQL injection = inArray/and su parametarski uslovi 
+    // SQL injection = inArray/and su parametarski uslovi
     await db
       .delete(activities)
       .where(
@@ -261,6 +279,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (e) {
     console.error("DELETE /api/activities error", e);
-    return NextResponse.json({ error: "Greska pri brisanju" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Greska pri brisanju" },
+      { status: 500 }
+    );
   }
 }
