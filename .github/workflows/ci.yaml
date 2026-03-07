@@ -43,7 +43,7 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:gi
+        with:
           node-version: "20"
           cache: "npm"
 
