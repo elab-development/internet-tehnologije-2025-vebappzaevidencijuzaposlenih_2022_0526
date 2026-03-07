@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       sub: String(inserted[0].id),
       email: inserted[0].email,
       name: inserted[0].fullName,
+      roleId: 3
     });
 
     const res = NextResponse.json(

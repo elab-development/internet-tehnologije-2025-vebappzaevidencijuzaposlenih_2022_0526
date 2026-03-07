@@ -1,32 +1,67 @@
+// src/app/api/activities/export/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { and, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
+
 import { db } from "@/src/db";
 import { workDayRecords, activities } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
+import { dateSchema } from "@/src/lib/validator";
 
-// Pomoćna funkcija:
-// "09:00" ili "09:00:00" prebacujemo u "090000"
-// jer ICS zahteva HHMMSS
+// ids query param: "1,2,3" prebacujemo u  [1, 2, 3]
+function parseIdsParam(idsParam: string | null): number[] {
+  if (!idsParam) return [];
+  const s = idsParam.trim();
+  if (!s) return [];
+
+  // XSS = ovde dozvoljavamo samo pozitivne cele brojeve (ne proizvoljan string)
+  return s
+    .split(",")
+    .map((x) => Number(String(x).trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+}
+
+// 09:00 ili 09:00:00 u ,,090000" (ICS zahteva HHMMSS)
 function toICSTimePart(time: string): string {
-  return time.replace(/:/g, "").padEnd(6, "0");
+  return String(time).replace(/:/g, "").padEnd(6, "0");
+}
+
+// XSS =  Sanitizacija za ICS tekst: uklanjamo nove redove da ne pokvare format fajla
+function sanitizeIcsText(value: unknown): string {
+  return String(value ?? "")
+    .replace(/\r?\n/g, " ")
+    .trim();
 }
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const searchParams = url.searchParams;
 
+<<<<<<< HEAD
     // 1. datum je obavezan
     const date = searchParams.get("date");
+=======
+    // XSS =  Validacija query parametara (date mora da prodje dateSchema)
+    const querySchema = z.object({
+      date: dateSchema,
+      ids: z.string().optional(),
+    });
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
 
-    if (!date) {
+    const parsed = querySchema.safeParse({
+      date: url.searchParams.get("date"),
+      ids: url.searchParams.get("ids") ?? undefined,
+    });
+
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Datum je obavezan." },
+        { error: parsed.error.issues[0]?.message ?? "Neispravan upit." },
         { status: 400 }
       );
     }
 
+<<<<<<< HEAD
     // 2. opciono: ids=1,2,3 za selektovane aktivnosti
     const idsParam = searchParams.get("ids"); // npr "32,43"
     let ids: number[] = [];
@@ -39,25 +74,29 @@ export async function GET(req: Request) {
     }
 
     // 3. provera autentifikacije
+=======
+    const date = parsed.data.date;
+    const ids = parseIdsParam(parsed.data.ids ?? null);
+
+    // IDOR + Auth: Bez validnog cookie + tokena ne dozvoljavamo eksport
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
     const token = (await cookies()).get(AUTH_COOKIE)?.value;
     if (!token) {
-      return NextResponse.json(
-        { error: "Niste ulogovani." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const claims = verifyAuthToken(token);
     const userId = Number(claims.sub);
-
     if (!userId) {
-      return NextResponse.json(
-        { error: "Niste ulogovani." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+<<<<<<< HEAD
     // 4. nalazenje work_day_record za tog usera i datum
+=======
+    // IDOR = Biramo work_day_record samo za ULOGOVANOG user-a (ne moze tudji)
+    // SQL injection =  Drizzle eq/and pravi parametarske upite (ne spajamo SQL string)
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
     const record = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -70,16 +109,22 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!record[0]) {
+<<<<<<< HEAD
       // nema radnog dana → nema ni aktivnosti
+=======
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
       return NextResponse.json(
         { error: "Nema aktivnosti za izabrani datum." },
         { status: 404 }
       );
     }
 
+<<<<<<< HEAD
     // 5. učitavanje aktivnosti (sve ili samo selektovane)
+=======
+    // SQL injection =  uslovi su parametarski; ids su brojevi filtrirani gore
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
     const baseCondition = eq(activities.workDayId, record[0].id);
-
     const whereCondition =
       ids.length > 0
         ? and(baseCondition, inArray(activities.id, ids))
@@ -97,12 +142,21 @@ export async function GET(req: Request) {
       .where(whereCondition)
       .orderBy(activities.startTime);
 
+<<<<<<< HEAD
     // 6. Generisanje .ics fajla
+=======
+    if (rows.length === 0) {
+      return NextResponse.json(
+        { error: "Nema aktivnosti za eksport." },
+        { status: 404 }
+      );
+    }
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
 
-    // YYYYMMDD format
+    // Generisemo .ics sadrzaj
     const yyyymmdd = date.replace(/-/g, "");
 
-    let ics =
+ let ics =
       "BEGIN:VCALENDAR\r\n" +
       "VERSION:2.0\r\n" +
       "PRODID:-//ITEH//Aktivnosti//SR\r\n" +
@@ -126,19 +180,26 @@ export async function GET(req: Request) {
     for (const a of rows) {
       const start = `${yyyymmdd}T${toICSTimePart(String(a.startTime))}`;
       const end = `${yyyymmdd}T${toICSTimePart(String(a.endTime))}`;
+      // Uklanjamo nove redove da ne pokvare ICS format
+      const summary = String(a.title).replace(/\n/g, " ");
+      const description = String(a.description ?? "").replace(/\n/g, " ");
 
       ics +=
         "BEGIN:VEVENT\r\n" +
-        `DTSTART;TZID=Europe/Belgrade:${start}\r\n` +
+        `DTSTART;TZID=Europe/Belgrade:${start}\r\n`+
         `DTEND;TZID=Europe/Belgrade:${end}\r\n` +
-        `SUMMARY:${String(a.title).replace(/\n/g, " ")}\r\n` +
-        `DESCRIPTION:${String(a.description ?? "").replace(/\n/g, " ")}\r\n` +
+        `SUMMARY:${summary}\r\n` +
+        `DESCRIPTION:${description}\r\n` +
         "END:VEVENT\r\n";
     }
 
     ics += "END:VCALENDAR\r\n";
 
+<<<<<<< HEAD
     // 7. vraćanje fajla
+=======
+    // vrati fajl kao download
+>>>>>>> 9164f8a (Dodati automatizovani testovi)
     return new Response(ics, {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
