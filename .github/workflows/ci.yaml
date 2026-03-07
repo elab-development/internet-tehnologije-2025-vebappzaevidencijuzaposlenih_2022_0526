@@ -2,9 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [develop, main]
+    branches:
+      - develop
+      - main
+      - feature/cicd
   pull_request:
-    branches: [develop, main]
+    branches:
+      - develop
+      - main
 
 jobs:
   test:
@@ -38,7 +43,7 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
+        with:gi
           node-version: "20"
           cache: "npm"
 
