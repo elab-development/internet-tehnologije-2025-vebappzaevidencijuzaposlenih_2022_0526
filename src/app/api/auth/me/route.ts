@@ -5,7 +5,50 @@ import { db } from "@/src/db";
 import { users, roles } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
-// GET- vraca podatke o ulogovanom korisniku
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Podaci o ulogovanom korisniku
+ *     description: Vraca podatke o trenutno ulogovanom korisniku na osnovu auth cookie-ja. Ako korisnik nije ulogovan ili nije aktivan, vraca user kao null.
+ *     tags:
+ *       - Auth
+ *     responses:
+ *       200:
+ *         description: Uspesan odgovor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   nullable: true
+ *                   oneOf:
+ *                     - type: "null"
+ *                     - type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: "2"
+ *                         fullName:
+ *                           type: string
+ *                           example: "Zorana Kostic"
+ *                         email:
+ *                           type: string
+ *                           example: "zorana@gmail.com"
+ *                         roleId:
+ *                           type: integer
+ *                           example: "2"
+ *                         roleName:
+ *                           type: string
+ *                           example: "MANAGER"
+ *                         isActive:
+ *                           type: boolean
+ *                           example: "true"
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ */
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -31,7 +74,7 @@ export async function GET() {
         fullName: users.fullName,
         email: users.email,
         roleId: users.roleId,
-        roleName: roles.name,          
+        roleName: roles.name,
         isActive: users.isActive,
         createdAt: users.createdAt,
       })

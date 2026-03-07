@@ -65,6 +65,206 @@ async function requireAdmin() {
   return { currentUser };
 }
 
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Vraca sve korisnike
+ *     description: Samo admin moze da vidi listu svih korisnika.
+ *     tags:
+ *       - Admin Users
+ *     responses:
+ *       200:
+ *         description: Uspesno vracena lista korisnika
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: "1"
+ *                       fullName:
+ *                         type: string
+ *                         example: "Zorana Kostic"
+ *                       email:
+ *                         type: string
+ *                         example: "zorana@gmail.com"
+ *                       roleId:
+ *                         type: integer
+ *                         example: "2"
+ *                       isActive:
+ *                         type: boolean
+ *                         example: "true"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Server error
+ *
+ *   post:
+ *     summary: Kreira novog korisnika
+ *     description: Samo admin moze da doda novog korisnika.
+ *     tags:
+ *       - Admin Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - email
+ *               - password
+ *               - roleId
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: "Danica Jovanovic"
+ *               email:
+ *                 type: string
+ *                 example: "danica@gmail.com"
+ *               password:
+ *                 type: string
+ *                 example: "123456"
+ *               roleId:
+ *                 type: integer
+ *                 example: "3"
+ *     responses:
+ *       201:
+ *         description: Korisnik uspesno kreiran
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: "4"
+ *                     fullName:
+ *                       type: string
+ *                       example: "Danica Jovanovic"
+ *                     email:
+ *                       type: string
+ *                       example: "danica@gmail.com"
+ *                     roleId:
+ *                       type: integer
+ *                       example: "3"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: "true"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       409:
+ *         description: Email vec postoji
+ *       500:
+ *         description: Server error
+ *
+ *   patch:
+ *     summary: Menja ulogu korisnika
+ *     description: Samo admin moze da promeni ulogu korisnika. Admin ne moze menjati sopstvenu ulogu.
+ *     tags:
+ *       - Admin Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - roleId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 example: "4"
+ *               roleId:
+*                 type: integer
+ *                 example: "2"
+ *     responses:
+ *       200:
+ *         description: Uloga uspesno izmenjena
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: "true"
+ *       400:
+ *         description: Neispravan zahtev ili pokusaj izmene sopstvene uloge
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Korisnik nije pronadjen
+ *       500:
+ *         description: Server error
+ *
+ *   delete:
+ *     summary: Brise korisnika
+ *     description: Samo admin moze da obrise korisnika. Admin ne moze obrisati sopstveni nalog.
+ *     tags:
+ *       - Admin Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 example: "4"
+ *     responses:
+ *       200:
+ *         description: Korisnik uspesno obrisan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: "true"
+ *       400:
+ *         description: Neispravan zahtev ili pokusaj brisanja sopstvenog naloga
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Korisnik nije pronadjen
+ *       500:
+ *         description: Server error
+ */
+
+
+
 // GET
 export async function GET() {
   try {

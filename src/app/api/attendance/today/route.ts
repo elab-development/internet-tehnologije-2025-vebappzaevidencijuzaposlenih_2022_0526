@@ -28,6 +28,49 @@ async function getUserIdFromAuthCookie(): Promise<number | null> {
   return userId;
 }
 
+
+/**
+ * @swagger
+ * /api/attendance/today:
+ *   get:
+ *     summary: Vraca danasnji attendance zapis ulogovanog korisnika
+ *     description: Vraca check-in i check-out podatke za danasnji dan za trenutno ulogovanog korisnika. Ako zapis ne postoji, vraca record kao null.
+ *     tags:
+ *       - Attendance
+ *     responses:
+ *       200:
+ *         description: Uspesan odgovor
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   nullable: true
+ *                   oneOf:
+ *                     - type: "null"
+ *                     - type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: "15"
+ *                         workDate:
+ *                           type: string
+ *                           example: "2026-03-06"
+ *                         checkIn:
+ *                           type: string
+ *                           format: date-time
+ *                         checkOut:
+ *                           nullable: true
+ *                           oneOf:
+ *                             - type: "null"
+ *                             - type: string
+ *                               format: date-time
+ */
+
+
+
+
 // GET 
 export async function GET() {
   try {

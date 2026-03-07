@@ -23,6 +23,60 @@ function monthRange(yyyyMm: string) {
   };
 }
 
+/**
+ * @swagger
+ * /api/reports/manager-activity-share:
+ *   get:
+ *     summary: Udeo clanova tima po aktivnosti
+ *     description: Za zadati mesec i naslov aktivnosti vraca koliko je svaki clan tima menadzera utrosio minuta na tu aktivnost.
+ *     tags:
+ *       - Reports
+ *     parameters:
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-02"
+ *         description: Mesec u formatu YYYY-MM
+ *       - in: query
+ *         name: title
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "Razvoj funkcionalnosti"
+ *         description: Naziv aktivnosti
+ *     responses:
+ *       200:
+ *         description: Uspesno vraceni podaci za pie chart
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: integer
+ *                     example: "3"
+ *                   fullName:
+ *                     type: string
+ *                     example: "Andjela Kandic"
+ *                   minutes:
+ *                     type: integer
+ *                     example: "540"
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       403:
+ *         description: Pristup dozvoljen samo menadzeru
+ *       500:
+ *         description: Greska pri ucitavanju izvestaja
+ */
+
+
+//GET
 export async function GET(req: Request) {
   try {
     const token = (await cookies()).get(AUTH_COOKIE)?.value;

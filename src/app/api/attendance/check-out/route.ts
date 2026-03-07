@@ -29,6 +29,49 @@ async function getUserIdFromAuthCookie(): Promise<number | null> {
   return userId;
 }
 
+/**
+ * @swagger
+ * /api/attendance/check-out:
+ *   post:
+ *     summary: Evidentira check-out ulogovanog korisnika
+ *     description: Upisuje vreme izlaska za danasnji dan i izracunava broj sati rada. Check-out nije moguc pre check-in-a i nije moguce evidentirati ga vise puta.
+ *     tags:
+ *       - Attendance
+ *     responses:
+ *       200:
+ *         description: Check-out uspesno evidentiran
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 15
+ *                     workDate:
+ *                       type: string
+ *                       example: "2026-03-06"
+ *                     checkIn:
+ *                       type: string
+ *                       format: date-time
+ *                     checkOut:
+ *                       type: string
+ *                       format: date-time
+ *                     hours:
+ *                       type: integer
+ *                       example: "8"
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       409:
+ *         description: Check-out nije dozvoljen jer nema check-in-a ili je vec evidentiran
+ *       500:
+ *         description: Greska na serveru
+ */
+
+
 export async function POST() {
   try {
     const userId = await getUserIdFromAuthCookie();

@@ -8,6 +8,39 @@ import { db } from "@/src/db";
 import { workDayRecords } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
+
+/**
+ * @swagger
+ * /api/reports/employee-productivity:
+ *   get:
+ *     summary: Produktivnost zaposlenog za poslednjih 6 meseci
+ *     description: Vraca ukupan broj radnih sati po mesecu za trenutno ulogovanog korisnika za poslednjih 6 meseci.
+ *     tags:
+ *       - Reports
+ *     responses:
+ *       200:
+ *         description: Uspesno vraceni podaci o produktivnosti
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   month:
+ *                     type: string
+ *                     example: "2026-02"
+ *                   totalHours:
+ *                     type: integer
+ *                     example: "160"
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       500:
+ *         description: Greska pri ucitavanju produktivnosti
+ */
+
+
+//GET
 export async function GET() {
   try {
     // Čitamo auth cookie

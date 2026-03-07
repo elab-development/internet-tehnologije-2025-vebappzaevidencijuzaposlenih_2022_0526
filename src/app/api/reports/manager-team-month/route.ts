@@ -26,6 +26,52 @@ function monthRange(yyyyMm: string) {
   return { startDate, endDateExclusive };
 }
 
+/**
+ * @swagger
+ * /api/reports/manager-team-month:
+ *   get:
+ *     summary: Ukupno trajanje aktivnosti clanova tima za mesec
+ *     description: Za zadati mesec vraca ukupan broj minuta aktivnosti po svakom clanu tima menadzera.
+ *     tags:
+ *       - Reports
+ *     parameters:
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-02"
+ *         description: Mesec u formatu YYYY-MM
+ *     responses:
+ *       200:
+ *         description: Uspesno vraceni podaci o timu
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: integer
+ *                     example: "3"
+ *                   fullName:
+ *                     type: string
+ *                     example: "Danica Jovanovic"
+ *                   totalMinutes:
+ *                     type: integer
+ *                     example: "1260"
+ *       400:
+ *         description: Neispravan month parametar
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       403:
+ *         description: Pristup dozvoljen samo menadzeru
+ *       500:
+ *         description: Greska pri ucitavanju izvestaja
+ */
+
+
 export async function GET(req: Request) {
   try {
     // auth

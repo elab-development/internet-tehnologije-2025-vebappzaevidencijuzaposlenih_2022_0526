@@ -84,6 +84,256 @@ async function managerCanAccessUser(managerId: number, employeeId: number) {
   return Boolean(shared[0]);
 }
 
+/**
+ * @swagger
+ * /api/admin/activities:
+ *   get:
+ *     summary: Vraca aktivnosti za izabranog korisnika i datum
+ *     description: Admin ili menadzer vraca aktivnosti za odredjenog zaposlenog i odredjeni datum. Menadzer moze samo nad clanovima svog tima.
+ *     tags:
+ *       - Admin Activities
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           example: "3"
+ *         description: ID korisnika
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-03-06"
+ *         description: Datum za koji se vracaju aktivnosti
+ *     responses:
+ *       200:
+ *         description: Uspesno vracene aktivnosti
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 activities:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: "11"
+ *                       title:
+ *                         type: string
+ *                         example: "Razvoj funkcionalnosti"
+ *                       description:
+ *                         nullable: true
+ *                         oneOf:
+ *                           - type: "null"
+ *                           - type: string
+ *                             example: "Implementacija zadataka"
+ *                       startTime:
+ *                         type: string
+ *                         example: "09:00:00"
+ *                       endTime:
+ *                         type: string
+ *                         example: "12:00:00"
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Greska pri ucitavanju aktivnosti
+ *
+ *   post:
+ *     summary: Dodaje aktivnost zaposlenom
+ *     description: Admin ili menadzer dodaje aktivnost zaposlenom za izabrani datum. Menadzer moze samo zaposlenom iz svog tima.
+ *     tags:
+ *       - Admin Activities
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - date
+ *               - title
+ *               - startTime
+ *               - endTime
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 example: "3"
+ *               date:
+ *                 type: string
+ *                 example: "2026-03-06"
+ *               title:
+ *                 type: string
+ *                 example: "Razvoj funkcionalnosti"
+ *               description:
+ *                 type: string
+ *                 example: "Implementacija zadataka"
+ *               startTime:
+ *                 type: string
+ *                 example: "09:00"
+ *               endTime:
+ *                 type: string
+ *                 example: "12:00"
+ *     responses:
+ *       201:
+ *         description: Aktivnost uspesno dodata
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 activity:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: "11"
+ *                     title:
+ *                       type: string
+ *                       example: "Razvoj funkcionalnosti"
+ *                     description:
+ *                       nullable: true
+ *                       oneOf:
+ *                         - type: "null"
+ *                         - type: string
+ *                           example: "Implementacija zadataka"
+ *                     startTime:
+ *                       type: string
+*                       example: "09:00:00"
+ *                     endTime:
+ *                       type: string
+ *                       example: "12:00:00"
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Greska pri dodavanju aktivnosti
+ *
+ *   patch:
+ *     summary: Menja aktivnost
+ *     description: Samo admin moze da menja postojecu aktivnost.
+ *     tags:
+ *       - Admin Activities
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *             properties:
+ *               id:
+ *                 type: integer
+ *                 example: "11"
+ *               title:
+ *                 type: string
+ *                 example: "Izmenjen naslov aktivnosti"
+ *               description:
+ *                 nullable: true
+ *                 oneOf:
+ *                   - type: "null"
+ *                   - type: string
+ *                     example: "Izmenjen opis"
+ *               startTime:
+ *                 type: string
+ *                 example: "10:00"
+ *               endTime:
+ *                 type: string
+ *                 example: "13:00"
+ *     responses:
+ *       200:
+ *         description: Aktivnost uspesno izmenjena
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 activity:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: "11"
+ *                     title:
+ *                       type: string
+ *                       example: "Izmenjen naslov aktivnosti"
+ *                     description:
+ *                       nullable: true
+ *                       oneOf:
+ *                         - type: "null"
+ *                         - type: string
+ *                           example: "Izmenjen opis"
+ *                     startTime:
+ *                       type: string
+ *                       example: "10:00:00"
+ *                     endTime:
+ *                       type: string
+ *                       example: "13:00:00"
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Aktivnost nije pronadjena
+ *       500:
+ *         description: Greska pri izmeni aktivnosti
+ *
+ *   delete:
+ *     summary: Brise aktivnosti
+ *     description: Samo admin moze da obrise jednu ili vise aktivnosti.
+ *     tags:
+ *       - Admin Activities
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: "[11, 12]"
+ *     responses:
+ *       200:
+ *         description: Aktivnosti uspesno obrisane
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: "true"
+ *       400:
+ *         description: Neispravan zahtev
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Greska pri brisanju aktivnosti
+ */
+
+
 // GET /api/admin/activities?userId=3&date=YYYY-MM-DD
 export async function GET(req: Request) {
   try {

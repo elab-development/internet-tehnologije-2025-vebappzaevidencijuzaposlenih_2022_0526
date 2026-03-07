@@ -23,6 +23,42 @@ function monthRange(yyyyMm: string) {
   };
 }
 
+/**
+ * @swagger
+ * /api/reports/manager-activity-titles:
+ *   get:
+ *     summary: Lista naziva aktivnosti tima za izabrani mesec
+ *     description: Vraca distinct naslove aktivnosti koje su clanovi tima menadzera radili u zadatom mesecu.
+ *     tags:
+ *       - Reports
+ *     parameters:
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-02"
+ *         description: Mesec u formatu YYYY-MM
+ *     responses:
+ *       200:
+ *         description: Uspesno vracena lista naziva aktivnosti
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: string
+ *                 example: "Razvoj funkcionalnosti"
+ *       400:
+ *         description: Neispravan month parametar
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       403:
+ *         description: Pristup dozvoljen samo menadzeru
+ *       500:
+ *         description: Greska pri ucitavanju aktivnosti
+ */
+
 export async function GET(req: Request) {
   try {
     const token = (await cookies()).get(AUTH_COOKIE)?.value;

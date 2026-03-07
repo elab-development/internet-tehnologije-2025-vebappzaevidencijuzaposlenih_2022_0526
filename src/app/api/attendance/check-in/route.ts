@@ -29,6 +29,73 @@ async function getUserIdFromAuthCookie(): Promise<number | null> {
   return userId;
 }
 
+/**
+ * @swagger
+ * /api/attendance/check-in:
+ *   post:
+ *     summary: Evidentira check-in ulogovanog korisnika
+ *     description: Upisuje vreme dolaska za danasnji dan. Ako zapis za danas ne postoji, kreira ga. Check-in nije dozvoljen za praznike niti vise puta za isti dan.
+ *     tags:
+ *       - Attendance
+ *     responses:
+ *       200:
+ *         description: Check-in uspesno evidentiran za postojeci zapis
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: "15"
+ *                     workDate:
+ *                       type: string
+ *                       example: "2026-03-06"
+ *                     checkIn:
+ *                       type: string
+ *                       format: date-time
+ *                     checkOut:
+ *                       nullable: true
+ *                       oneOf:
+ *                         - type: "null"
+ *                         - type: string
+ *                           format: date-time
+ *       201:
+ *         description: Check-in uspesno evidentiran i kreiran novi zapis
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 record:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: "15"
+ *                     workDate:
+ *                       type: string
+ *                       example: "2026-03-06"
+ *                     checkIn:
+ *                       type: string
+ *                       format: date-time
+ *                     checkOut:
+ *                       nullable: true
+ *                       oneOf:
+ *                         - type: "null"
+ *                         - type: string
+ *                           format: date-time
+ *       401:
+ *         description: Korisnik nije ulogovan
+ *       409:
+ *         description: Check-in nije dozvoljen jer je vec evidentiran ili je danas praznik
+ *       500:
+ *         description: Greska na serveru
+ */
+
 export async function POST() {
   try {
     const userId = await getUserIdFromAuthCookie();

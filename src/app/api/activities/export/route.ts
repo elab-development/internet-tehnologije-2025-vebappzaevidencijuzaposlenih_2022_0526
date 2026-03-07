@@ -34,6 +34,50 @@ function sanitizeIcsText(value: unknown): string {
     .trim();
 }
 
+
+/**
+ * @swagger
+ * /api/activities/export:
+ *   get:
+ *     summary: Eksport aktivnosti u ICS fajl
+ *     description: Vraca aktivnosti ulogovanog korisnika za izabrani datum kao .ics kalendarski fajl. Opcioni query parametar ids omogucava eksport samo odabranih aktivnosti.
+ *     tags:
+ *       - Activities
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-03-06"
+ *         description: Datum za koji se eksportuju aktivnosti
+ *       - in: query
+ *         name: ids
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: "1,2,3"
+ *         description: Zarezom odvojeni ID-jevi aktivnosti za parcijalni eksport
+ *     responses:
+ *       200:
+ *         description: Uspesan eksport ICS fajla
+ *         content:
+ *           text/calendar:
+ *             schema:
+ *               type: string
+ *               example: "BEGIN:VCALENDAR..."
+ *       400:
+ *         description: Neispravan upit
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Nema aktivnosti za izabrani datum ili nema aktivnosti za eksport
+ *       500:
+ *         description: Greska pri eksportovanju aktivnosti
+ */
+
+
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);

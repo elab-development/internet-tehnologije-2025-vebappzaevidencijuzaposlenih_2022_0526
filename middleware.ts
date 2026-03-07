@@ -27,6 +27,12 @@ function isPublicPath(pathname: string) {
   if (pathname === "/" || pathname === "/login"  || pathname === "/login/admin")
     return true;
 
+  if (pathname.startsWith("/api-docs"))
+    return true;
+
+    if (pathname.startsWith("/api/swagger"))
+    return true;
+
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
@@ -42,6 +48,7 @@ function isPublicPath(pathname: string) {
 }
 
 export function middleware(req: NextRequest) {
+  console.log("MIDDLEWARE PATH:", req.nextUrl.pathname);
   const { pathname } = req.nextUrl;
   if (isPublicPath(pathname)) {return NextResponse.next();}
   const token = req.cookies.get(AUTH_COOKIE)?.value;

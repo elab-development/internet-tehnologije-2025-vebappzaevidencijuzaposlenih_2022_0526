@@ -6,6 +6,76 @@ import { db } from "@/src/db";
 import { users, userGroups } from "@/src/db/schema";
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
+/**
+ * @swagger
+ * /api/team/users:
+ *   get:
+ *     summary: Lista clanova tima menadzera
+ *     description: Vraca sve aktivne zaposlene koji pripadaju grupama ulogovanog menadzera.
+ *     tags:
+ *       - Team
+ *     responses:
+ *       200:
+ *         description: Uspesno vracena lista clanova tima
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 3
+ *                       fullName:
+ *                         type: string
+ *                         example: Andjela Kandic
+ *                       email:
+ *                         type: string
+ *                         example: andjela@gmail.com
+ *                       roleId:
+ *                         type: integer
+ *                         example: 3
+ *                       isActive:
+ *                         type: boolean
+ *                         example: true
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       403:
+ *         description: Forbidden - samo menadzer ima pristup
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Forbidden
+ *       500:
+ *         description: Greska pri ucitavanju clanova tima
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Greška pri učitavanju članova tima
+ */
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -39,7 +109,7 @@ export async function GET() {
     const currentUser = me[0];
 
     // IDOR / RBAC = samo aktivan menadzer sme da vidi listu tima
-    if (!currentUser ||  currentUser.roleId !== 2 ||  !currentUser.isActive) {
+    if (!currentUser || currentUser.roleId!==2 || currentUser.isActive) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -55,8 +125,7 @@ export async function GET() {
     if (groupIds.length === 0) {
       return NextResponse.json({ users: [] }, { status: 200 });
     }
-
-    // 3) svi zaposleni koji su u tim grupama
+  // 3) svi zaposleni koji su u tim grupama
     const members = await db
       .select({
         id: users.id,

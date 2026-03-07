@@ -31,6 +31,58 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
+/**
+ * 
+ * /api/reports/employee-month:
+ *   get:
+ *     summary: Mesecni izvestaj zaposlenog
+ *     description: Vraca broj radnih dana, ukupan broj aktivnosti i zbir minuta po naslovu aktivnosti za zadati mesec trenutno ulogovanog korisnika.
+ *     tags:
+ *       - Reports
+ *     parameters:
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "2026-02"
+ *         description: Mesec u formatu YYYY-MM
+ *     responses:
+ *       200:
+ *         description: Uspesno generisan izvestaj
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 month:
+ *                   type: string
+ *                   example: "2026-02"
+ *                 workDaysCount:
+ *                   type: integer
+ *                   example: "20"
+ *                 totalActivities:
+ *                   type: integer
+ *                   example: "42"
+ *                 activitiesByTitle:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       title:
+ *                         type: string
+ *                         example: "Razvoj funkcionalnosti"
+ *                       minutes:
+ *                         type: integer
+ *                         example: "960"
+ *       400:
+ *         description: Neispravan month parametar
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Greska pri generisanju izvestaja
+ */
+
 export async function GET(req: Request) {
   try {
     const cookieStore = await cookies();

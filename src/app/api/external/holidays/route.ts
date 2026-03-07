@@ -12,6 +12,69 @@ type NagerHoliday = {
   types: string[];
 };
 
+/**
+ * @swagger
+ * /api/external/holidays:
+ *   get:
+ *     summary: Vraca listu drzavnih praznika
+ *     description: Vraca praznike za zadatu drzavu i godinu preko eksternog Nager API servisa. Ako parametri nisu prosledjeni, koristi se RS i tekuca godina.
+ *     tags:
+ *       - External
+ *     parameters:
+ *       - in: query
+ *         name: country
+ *         required: false
+ *         schema:
+ *           type: string
+ *           example: "RS"
+ *         description: Kod drzave
+ *       - in: query
+ *         name: year
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: "2026"
+ *         description: Godina za koju se vracaju praznici
+ *     responses:
+ *       200:
+ *         description: Uspesno vracena lista praznika
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 countryCode:
+ *                   type: string
+ *                   example: "RS"
+ *                 year:
+ *                   type: integer
+ *                   example: "2026"
+ *                 holidays:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                         example: "2026-01-01"
+ *                       localName:
+ *                         type: string
+ *                         example: "Nova godina"
+ *                       name:
+ *                         type: string
+ *                         example: "New Year's Day"
+ *                       types:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                           example: "Public"
+ *       502:
+ *         description: Greska eksternog servisa
+ *       500:
+ *         description: Greska pri ucitavanju praznika
+ */
+
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
