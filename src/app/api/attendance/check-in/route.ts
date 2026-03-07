@@ -115,6 +115,7 @@ export async function POST() {
       );
     }
 
+    //const workDate = todayISO();
     const now = new Date();
 
     // SQL injection = Drizzle eq/and pravi parametrizovane upite (bez SQL konkatenacije)
