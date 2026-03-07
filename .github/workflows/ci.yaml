@@ -52,6 +52,8 @@ jobs:
 
       - name: Build Next.js aplikacije
         run: npm run build
+        env:
+          JWT_SECRET: test-secret
 
       - name: Build Docker image
         run: docker build -t evidencija-app .
