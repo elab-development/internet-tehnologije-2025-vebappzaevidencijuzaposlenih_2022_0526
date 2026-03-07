@@ -12,9 +12,7 @@ import {
   activitiesDeleteBodySchema,
 } from "@/src/lib/validator";
 
-<<<<<<< HEAD
 // GET /api/activities?date=YYYY-MM-DD
-=======
 // "09:00" -> "09:00:00" (kompatibilno sa SQL time)
 function normalizeTime(t: string): string {
   const s = String(t ?? "").trim();
@@ -45,7 +43,6 @@ async function getUserIdFromAuthCookie(): Promise<number | null> {
 }
 
 // GET 
->>>>>>> 9164f8a (Dodati automatizovani testovi)
 export async function GET(req: Request) {
   try {
     // IDOR = ulogovan user sme da vidi SVOJE aktivnosti
@@ -128,13 +125,14 @@ export async function POST(req: Request) {
 );
     }
 
-<<<<<<< HEAD
+    let startTime = normalizeTime(parsed.data.startTime);
+    let endTime = normalizeTime(parsed.data.endTime);
+
     // input type="time" obično šalje HH:MM -> dodamo :00
     if (startTime.length === 5) startTime = `${startTime}:00`;
     if (endTime.length === 5) endTime = `${endTime}:00`;
 
     // nađi ili kreiraj work_day_record za tog usera i datum
-=======
     const date = parsed.data.date;
 
     // XSS=  sanitizacija user inputa
@@ -144,12 +142,10 @@ export async function POST(req: Request) {
         ? sanitizeText(parsed.data.description)
         : null;
 
-    const startTime = normalizeTime(parsed.data.startTime);
-    const endTime = normalizeTime(parsed.data.endTime);
+    
 
     // SQL injection =  parametarski upit
     // IDOR =  work_day_record pravimo/koristimo samo za ulogovanog usera
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     const existing = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -187,10 +183,7 @@ export async function POST(req: Request) {
         workDayId,
         title,
         description,
-<<<<<<< HEAD
         // minutesSpent: će ostati default 0 u bazi
-=======
->>>>>>> 9164f8a (Dodati automatizovani testovi)
         startTime: startTime as any,
         endTime: endTime as any,
       })

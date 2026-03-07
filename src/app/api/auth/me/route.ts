@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
-<<<<<<< HEAD
 import { users, roles } from "@/src/db/schema"; // <-- dodaj roles
-=======
-import { users, roles } from "@/src/db/schema";
->>>>>>> 9164f8a (Dodati automatizovani testovi)
 import { AUTH_COOKIE, verifyAuthToken } from "@/src/lib/auth";
 
 // GET- vraca podatke o ulogovanom korisniku
@@ -35,23 +31,13 @@ export async function GET() {
         fullName: users.fullName,
         email: users.email,
         roleId: users.roleId,
-<<<<<<< HEAD
-        roleName: roles.name,          // <-- ovde
-=======
-        roleName: roles.name,
->>>>>>> 9164f8a (Dodati automatizovani testovi)
+        roleName: roles.name,        
         isActive: users.isActive,
         createdAt: users.createdAt,
       })
       .from(users)
-<<<<<<< HEAD
-      .innerJoin(roles, eq(users.roleId, roles.id)) // <-- join
+      .innerJoin(roles, eq(users.roleId, roles.id)) 
       .where(eq(users.id, Number(claims.sub)))
-=======
-      .innerJoin(roles, eq(users.roleId, roles.id))
-      // SQL injection = Drizzle eq pravi parametarski upit
-      .where(eq(users.id, userId))
->>>>>>> 9164f8a (Dodati automatizovani testovi)
       .limit(1);
 
     const user = found[0];

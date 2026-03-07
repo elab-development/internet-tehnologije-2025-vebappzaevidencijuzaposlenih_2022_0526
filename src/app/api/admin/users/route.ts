@@ -73,31 +73,7 @@ export async function GET() {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-<<<<<<< HEAD
-    const claims = verifyAuthToken(token);
-
-    // ko je ulogovan proveravamoo
-    const me = await db
-      .select({
-        id: users.id,
-        roleId: users.roleId,
-        isActive: users.isActive,
-      })
-      .from(users)
-      .where(eq(users.id, Number(claims.sub)))
-      .limit(1);
-
-    const currentUser = me[0];
-
-    // nije admin
-    if (!currentUser || currentUser.roleId !== 1) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // admin → uzmi sve korisnike
-=======
     // SQL injection =  Drizzle parametarski upiti; nema SQL konkatenacije
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     const allUsers = await db
       .select({
         id: users.id,

@@ -41,21 +41,11 @@ export async function POST() {
       return NextResponse.json({ error: "Check-out je već evidentiran." }, { status: 409 });
     }
 
-<<<<<<< HEAD
     //UPISUJEMO TRENUTNO vreme kao checkout
     const updated = await db
       .update(workDayRecords)
       .set({ checkOut: new Date() })
       .where(eq(workDayRecords.id, existing[0].id))
-=======
-   // const now = new Date();
-
-    const updated = await db
-      .update(workDayRecords)
-      .set({ checkOut: now })
-      // IDOR = update ogranicavamo na (id + userId) da niko ne moze da updateuje tudji zapis
-      .where(and(eq(workDayRecords.id, existing[0].id), eq(workDayRecords.userId, userId)))
->>>>>>> 9164f8a (Dodati automatizovani testovi)
       .returning({
         id: workDayRecords.id,
         workDate: workDayRecords.workDate,
@@ -68,8 +58,3 @@ export async function POST() {
     return NextResponse.json({ error: "Greška na serveru." }, { status: 500 });
   }
 }
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 9164f8a (Dodati automatizovani testovi)

@@ -38,16 +38,11 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
 
-<<<<<<< HEAD
-    // 1. datum je obavezan
-    const date = searchParams.get("date");
-=======
     // XSS =  Validacija query parametara (date mora da prodje dateSchema)
     const querySchema = z.object({
       date: dateSchema,
       ids: z.string().optional(),
     });
->>>>>>> 9164f8a (Dodati automatizovani testovi)
 
     const parsed = querySchema.safeParse({
       date: url.searchParams.get("date"),
@@ -61,25 +56,10 @@ export async function GET(req: Request) {
       );
     }
 
-<<<<<<< HEAD
-    // 2. opciono: ids=1,2,3 za selektovane aktivnosti
-    const idsParam = searchParams.get("ids"); // npr "32,43"
-    let ids: number[] = [];
-
-    if (idsParam && idsParam.trim() !== "") {
-      ids = idsParam
-        .split(",")
-        .map((x) => Number(x.trim()))
-        .filter((n) => !Number.isNaN(n));
-    }
-
-    // 3. provera autentifikacije
-=======
     const date = parsed.data.date;
     const ids = parseIdsParam(parsed.data.ids ?? null);
 
     // IDOR + Auth: Bez validnog cookie + tokena ne dozvoljavamo eksport
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     const token = (await cookies()).get(AUTH_COOKIE)?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -91,12 +71,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-<<<<<<< HEAD
-    // 4. nalazenje work_day_record za tog usera i datum
-=======
     // IDOR = Biramo work_day_record samo za ULOGOVANOG user-a (ne moze tudji)
     // SQL injection =  Drizzle eq/and pravi parametarske upite (ne spajamo SQL string)
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     const record = await db
       .select({ id: workDayRecords.id })
       .from(workDayRecords)
@@ -109,21 +85,13 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!record[0]) {
-<<<<<<< HEAD
-      // nema radnog dana → nema ni aktivnosti
-=======
->>>>>>> 9164f8a (Dodati automatizovani testovi)
       return NextResponse.json(
         { error: "Nema aktivnosti za izabrani datum." },
         { status: 404 }
       );
     }
 
-<<<<<<< HEAD
-    // 5. učitavanje aktivnosti (sve ili samo selektovane)
-=======
     // SQL injection =  uslovi su parametarski; ids su brojevi filtrirani gore
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     const baseCondition = eq(activities.workDayId, record[0].id);
     const whereCondition =
       ids.length > 0
@@ -142,16 +110,12 @@ export async function GET(req: Request) {
       .where(whereCondition)
       .orderBy(activities.startTime);
 
-<<<<<<< HEAD
-    // 6. Generisanje .ics fajla
-=======
     if (rows.length === 0) {
       return NextResponse.json(
         { error: "Nema aktivnosti za eksport." },
         { status: 404 }
       );
     }
->>>>>>> 9164f8a (Dodati automatizovani testovi)
 
     // Generisemo .ics sadrzaj
     const yyyymmdd = date.replace(/-/g, "");
@@ -195,11 +159,7 @@ export async function GET(req: Request) {
 
     ics += "END:VCALENDAR\r\n";
 
-<<<<<<< HEAD
-    // 7. vraćanje fajla
-=======
     // vrati fajl kao download
->>>>>>> 9164f8a (Dodati automatizovani testovi)
     return new Response(ics, {
       headers: {
         "Content-Type": "text/calendar; charset=utf-8",
@@ -214,3 +174,158 @@ export async function GET(req: Request) {
     );
   }
 }
+
+/*export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+
+    // 1. datum je obavezan
+    //const date = searchParams.get("date");
+
+    const parsed = querySchema.safeParse({
+      date: url.searchParams.get("date"),
+      ids: url.searchParams.get("ids") ?? undefined,
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Neispravan upit." },
+        { status: 400 }
+      );
+    }
+
+    // 2. opciono: ids=1,2,3 za selektovane aktivnosti
+    const idsParam = searchParams.get("ids"); // npr "32,43"
+    let ids: number[] = [];
+
+    if (idsParam && idsParam.trim() !== "") {
+      ids = idsParam
+        .split(",")
+        .map((x) => Number(x.trim()))
+        .filter((n) => !Number.isNaN(n));
+    }
+
+    // 3. provera autentifikacije
+    const date = parsed.data.date;
+    const ids = parseIdsParam(parsed.data.ids ?? null);
+
+    // IDOR + Auth: Bez validnog cookie + tokena ne dozvoljavamo eksport
+    const token = (await cookies()).get(AUTH_COOKIE)?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const claims = verifyAuthToken(token);
+    const userId = Number(claims.sub);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 4. nalazenje work_day_record za tog usera i datum
+    // IDOR = Biramo work_day_record samo za ULOGOVANOG user-a (ne moze tudji)
+    // SQL injection =  Drizzle eq/and pravi parametarske upite (ne spajamo SQL string)
+    const record = await db
+      .select({ id: workDayRecords.id })
+      .from(workDayRecords)
+      .where(
+        and(
+          eq(workDayRecords.userId, userId),
+          eq(workDayRecords.workDate, date as any)
+        )
+      )
+      .limit(1);
+
+    if (!record[0]) {
+      // nema radnog dana -> nema ni aktivnosti
+      return NextResponse.json(
+        { error: "Nema aktivnosti za izabrani datum." },
+        { status: 404 }
+      );
+    }
+
+    // 5. učitavanje aktivnosti (sve ili samo selektovane)
+    // SQL injection =  uslovi su parametarski; ids su brojevi filtrirani gore
+    const baseCondition = eq(activities.workDayId, record[0].id);
+    const whereCondition =
+      ids.length > 0
+        ? and(baseCondition, inArray(activities.id, ids))
+        : baseCondition;
+
+    const rows = await db
+      .select({
+        id: activities.id,
+        title: activities.title,
+        description: activities.description,
+        startTime: activities.startTime,
+        endTime: activities.endTime,
+      })
+      .from(activities)
+      .where(whereCondition)
+      .orderBy(activities.startTime);
+
+    // 6. Generisanje .ics fajla
+    if (rows.length === 0) {
+      return NextResponse.json(
+        { error: "Nema aktivnosti za eksport." },
+        { status: 404 }
+      );
+    }
+
+    // Generisemo .ics sadrzaj
+    const yyyymmdd = date.replace(/-/g, "");
+
+ let ics =
+      "BEGIN:VCALENDAR\r\n" +
+      "VERSION:2.0\r\n" +
+      "PRODID:-//ITEH//Aktivnosti//SR\r\n" +
+      "CALSCALE:GREGORIAN\r\n" +
+      "BEGIN:VTIMEZONE\r\n" +
+      "TZID:Europe/Belgrade\r\n" +
+      "BEGIN:STANDARD\r\n" +
+      "TZOFFSETFROM:+0200\r\n" +
+      "TZOFFSETTO:+0100\r\n" +
+      "DTSTART:19701025T030000\r\n" +
+      "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\n" +
+      "END:STANDARD\r\n" +
+      "BEGIN:DAYLIGHT\r\n" +
+      "TZOFFSETFROM:+0100\r\n" +
+      "TZOFFSETTO:+0200\r\n" +
+      "DTSTART:19700329T020000\r\n" +
+      "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\n" +
+      "END:DAYLIGHT\r\n" +
+      "END:VTIMEZONE\r\n";
+
+    for (const a of rows) {
+      const start = `${yyyymmdd}T${toICSTimePart(String(a.startTime))}`;
+      const end = `${yyyymmdd}T${toICSTimePart(String(a.endTime))}`;
+      // Uklanjamo nove redove da ne pokvare ICS format
+      const summary = String(a.title).replace(/\n/g, " ");
+      const description = String(a.description ?? "").replace(/\n/g, " ");
+
+      ics +=
+        "BEGIN:VEVENT\r\n" +
+        `DTSTART;TZID=Europe/Belgrade:${start}\r\n`+
+        `DTEND;TZID=Europe/Belgrade:${end}\r\n` +
+        `SUMMARY:${summary}\r\n` +
+        `DESCRIPTION:${description}\r\n` +
+        "END:VEVENT\r\n";
+    }
+
+    ics += "END:VCALENDAR\r\n";
+
+    // 7. vraćanje fajla
+    // vrati fajl kao download
+    return new Response(ics, {
+      headers: {
+        "Content-Type": "text/calendar; charset=utf-8",
+        "Content-Disposition": `attachment; filename="aktivnosti_${date}.ics"`,
+      },
+    });
+  } catch (e) {
+    console.error("GET /api/activities/export error", e);
+    return NextResponse.json(
+      { error: "Greška pri eksportovanju aktivnosti." },
+      { status: 500 }
+    );
+  }
+}*/
