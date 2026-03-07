@@ -56,4 +56,4 @@ jobs:
           JWT_SECRET: test-secret
 
       - name: Build Docker image
-        run: docker build -t evidencija-app .
+        run: docker build --build-arg JWT_SECRET=test-secret -t evidencija-app .
