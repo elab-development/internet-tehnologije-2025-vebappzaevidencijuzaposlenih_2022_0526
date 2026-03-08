@@ -1,4 +1,35 @@
 import * as jwt from "jsonwebtoken";
+import type { SignOptions } from "jsonwebtoken";
+
+export const AUTH_COOKIE = "auth_token";
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing JWT_SECRET in env file");
+  }
+  return secret;
+}
+
+export function signAuthToken(payload: { sub: string; roleId: number }) {
+  const options: SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES || "7d") as jwt.SignOptions["expiresIn"],
+  };
+
+  return jwt.sign(payload, getJwtSecret(), options);
+}
+
+export function verifyAuthToken(token: string) {
+  return jwt.verify(token, getJwtSecret()) as {
+    sub: string;
+    roleId: number;
+    iat: number;
+    exp: number;
+  };
+}
+
+
+/*import * as jwt from "jsonwebtoken";
 
 export const AUTH_COOKIE = "auth";
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -36,7 +67,7 @@ export function verifyAuthToken(token: string): JwtUserClaims {
     name: payload.name,
     roleId: payload.roleId,
   };
-}
+}*/
 
 // opcije za cookie
 export function cookieOpts() {
