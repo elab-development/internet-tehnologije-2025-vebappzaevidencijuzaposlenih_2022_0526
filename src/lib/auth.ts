@@ -11,22 +11,27 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signAuthToken(payload: { sub: string; roleId: number }) {
+type AuthTokenPayload = {
+  sub: string;
+  roleId: number;
+  email: string;
+};
+
+export function signAuthToken(payload: AuthTokenPayload) {
   const options: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES || "7d") as jwt.SignOptions["expiresIn"],
+    expiresIn: (process.env.JWT_EXPIRES || "7d") as SignOptions["expiresIn"],
   };
 
   return jwt.sign(payload, getJwtSecret(), options);
 }
 
 export function verifyAuthToken(token: string) {
-  return jwt.verify(token, getJwtSecret()) as {
-    sub: string;
-    roleId: number;
+  return jwt.verify(token, getJwtSecret()) as AuthTokenPayload & {
     iat: number;
     exp: number;
   };
 }
+
 
 
 /*import * as jwt from "jsonwebtoken";
