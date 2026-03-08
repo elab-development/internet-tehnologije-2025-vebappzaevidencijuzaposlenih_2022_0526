@@ -15,6 +15,7 @@ type AuthTokenPayload = {
   sub: string;
   roleId: number;
   email: string;
+  name: string;
 };
 
 export function signAuthToken(payload: AuthTokenPayload) {
