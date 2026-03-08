@@ -89,6 +89,10 @@ export async function GET() {
     const claims = verifyAuthToken(token);
     const managerId = Number(claims.sub);
 
+    // console.log("TEAM USERS claims:", claims);
+    // console.log("TEAM USERS managerId:", managerId);
+
+
     // IDOR = ako token nema validan userId
     if (!managerId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,9 +111,11 @@ export async function GET() {
       .limit(1);
 
     const currentUser = me[0];
+  //  console.log("TEAM USERS currentUser:", currentUser);
+
 
     // IDOR / RBAC = samo aktivan menadzer sme da vidi listu tima
-    if (!currentUser || currentUser.roleId!==2 || currentUser.isActive) {
+    if (!currentUser || currentUser.roleId!==2) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -121,6 +127,8 @@ export async function GET() {
       .where(eq(userGroups.userId, managerId));
 
     const groupIds = myGroups.map((g) => g.groupId);
+
+  //  console.log("TEAM USERS groupIds:", groupIds);
 
     if (groupIds.length === 0) {
       return NextResponse.json({ users: [] }, { status: 200 });
